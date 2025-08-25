@@ -84,6 +84,15 @@ struct ColorPalette {
         }
     }
     
+    // MARK: - Additional Colors
+    static func additionalColor(for name: String) -> Color {
+        switch name {
+        case "honeyGold": return Color("HoneyGold")
+        case "terracotta": return Color("Terracotta")
+        default: return .gray
+        }
+    }
+    
     // MARK: - Mood Colors
     static func moodColor(for mood: Mood, isDarkMode: Bool = false) -> Color {
         if isDarkMode {
