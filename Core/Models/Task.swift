@@ -62,7 +62,7 @@ enum TaskPriority: String, CaseIterable, Codable {
     }
 }
 
-struct Task: Identifiable, Codable {
+struct TaskItem: Identifiable, Codable {
     let id: UUID
     var title: String
     var description: String?
@@ -114,8 +114,8 @@ struct Task: Identifiable, Codable {
     }
 }
 
-// MARK: - Task Extensions
-extension Task {
+// MARK: - TaskItem Extensions
+extension TaskItem {
     var isCompleted: Bool {
         status == .completed
     }

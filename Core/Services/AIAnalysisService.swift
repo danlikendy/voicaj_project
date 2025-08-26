@@ -29,11 +29,11 @@ class AIAnalysisService: ObservableObject {
     
     private func performAnalysis(transcript: String, template: VoiceTemplate?) async -> AIAnalysisResult {
         // Разбиваем транскрипт на предложения
-        let sentences = transcript.components(separatedBy: .sentenceTerminators)
+        let sentences = transcript.components(separatedBy: CharacterSet(charactersIn: ".!?"))
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         
-        var tasks: [Task] = []
+        var tasks: [TaskItem] = []
         var mood: Mood = .calm
         
         for sentence in sentences {
@@ -47,7 +47,7 @@ class AIAnalysisService: ObservableObject {
         
         // Если задач не найдено, создаем заметку
         if tasks.isEmpty {
-            let ideaTask = Task(
+            let ideaTask = TaskItem(
                 title: "Заметка",
                 description: transcript,
                 status: .idea,
@@ -65,7 +65,7 @@ class AIAnalysisService: ObservableObject {
         )
     }
     
-    private func extractTaskFromSentence(_ sentence: String, template: VoiceTemplate?) async -> Task? {
+    private func extractTaskFromSentence(_ sentence: String, template: VoiceTemplate?) async -> TaskItem? {
         let lowercased = sentence.lowercased()
         
         // Определяем статус задачи
@@ -105,7 +105,7 @@ class AIAnalysisService: ObservableObject {
         // Генерируем описание
         let description = generateTaskDescription(from: sentence, title: title)
         
-        return Task(
+        return TaskItem(
             title: title,
             description: description,
             status: status,
@@ -127,19 +127,19 @@ class AIAnalysisService: ObservableObject {
         } else if lowercased.contains("послезавтра") {
             return calendar.date(byAdding: .day, value: 2, to: now)
         } else if lowercased.contains("в понедельник") || lowercased.contains("в пн") {
-            return getNextWeekday(.monday)
+            return getNextWeekday(2)
         } else if lowercased.contains("во вторник") || lowercased.contains("в вт") {
-            return getNextWeekday(.tuesday)
+            return getNextWeekday(3)
         } else if lowercased.contains("в среду") || lowercased.contains("в ср") {
-            return getNextWeekday(.wednesday)
+            return getNextWeekday(4)
         } else if lowercased.contains("в четверг") || lowercased.contains("в чт") {
-            return getNextWeekday(.thursday)
+            return getNextWeekday(5)
         } else if lowercased.contains("в пятницу") || lowercased.contains("в пт") {
-            return getNextWeekday(.friday)
+            return getNextWeekday(6)
         } else if lowercased.contains("в субботу") || lowercased.contains("в сб") {
-            return getNextWeekday(.saturday)
+            return getNextWeekday(7)
         } else if lowercased.contains("в воскресенье") || lowercased.contains("в вс") {
-            return getNextWeekday(.sunday)
+            return getNextWeekday(1)
         }
         
         return nil
@@ -221,7 +221,7 @@ class AIAnalysisService: ObservableObject {
         }
     }
     
-    private func calculateConfidence(for tasks: [Task], transcript: String) -> Double {
+    private func calculateConfidence(for tasks: [TaskItem], transcript: String) -> Double {
         var confidence = 0.8 // Базовая уверенность
         
         // Увеличиваем уверенность за четкие указания
@@ -243,7 +243,7 @@ class AIAnalysisService: ObservableObject {
     
     private func simulateAnalysisProgress() async {
         for i in 1...10 {
-            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 секунды
+            // Простая задержка вместо Task.sleep
             await MainActor.run {
                 analysisProgress = Double(i) / 10.0
             }
@@ -254,7 +254,7 @@ class AIAnalysisService: ObservableObject {
 // MARK: - AI Analysis Result
 
 struct AIAnalysisResult {
-    let tasks: [Task]
+    let tasks: [TaskItem]
     let mood: Mood
     let transcript: String
     let confidence: Double

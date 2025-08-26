@@ -1,8 +1,9 @@
 import Foundation
 import Combine
+import SwiftUI
 
 class HomeViewModel: ObservableObject {
-    @Published var tasks: [Task] = []
+    @Published var tasks: [TaskItem] = []
     @Published var collapsedSections: Set<TaskStatus> = []
     @Published var isRecordingButtonPulsing = true
     
@@ -66,7 +67,7 @@ class HomeViewModel: ObservableObject {
     
     // MARK: - Public Methods
     
-    func tasksForStatus(_ status: TaskStatus) -> [Task] {
+    func tasksForStatus(_ status: TaskStatus) -> [TaskItem] {
         return tasks.filter { $0.status == status }
     }
     
@@ -78,7 +79,7 @@ class HomeViewModel: ObservableObject {
         }
     }
     
-    func completeTask(_ task: Task) {
+    func completeTask(_ task: TaskItem) {
         if let index = tasks.firstIndex(where: { $0.id == task.id }) {
             tasks[index].status = .completed
             tasks[index].completedAt = Date()
@@ -86,14 +87,14 @@ class HomeViewModel: ObservableObject {
         }
     }
     
-    func snoozeTask(_ task: Task, until date: Date) {
+    func snoozeTask(_ task: TaskItem, until date: Date) {
         if let index = tasks.firstIndex(where: { $0.id == task.id }) {
             tasks[index].dueDate = date
             tasks[index].updatedAt = Date()
         }
     }
     
-    func deleteTask(_ task: Task) {
+    func deleteTask(_ task: TaskItem) {
         tasks.removeAll { $0.id == task.id }
     }
     
@@ -118,7 +119,7 @@ class HomeViewModel: ObservableObject {
     private func loadSampleData() {
         // Sample tasks for development
         let sampleTasks = [
-            Task(
+            TaskItem(
                 title: "Сделать уборку",
                 description: "Пропылесосить и помыть полы",
                 status: .completed,
@@ -126,7 +127,7 @@ class HomeViewModel: ObservableObject {
                 tags: ["дом", "быт"],
                 createdAt: Date().addingTimeInterval(-86400)
             ),
-            Task(
+            TaskItem(
                 title: "Купить продукты",
                 description: "Молоко, хлеб, яйца",
                 status: .planned,
@@ -134,21 +135,21 @@ class HomeViewModel: ObservableObject {
                 dueDate: Date().addingTimeInterval(3600),
                 tags: ["покупки", "быт"]
             ),
-            Task(
+            TaskItem(
                 title: "Позвонить маме",
                 description: "Узнать как дела",
                 status: .important,
                 priority: .high,
                 tags: ["семья", "звонки"]
             ),
-            Task(
+            TaskItem(
                 title: "Записаться к врачу",
                 description: "Терапевт, на следующей неделе",
                 status: .stuck,
                 priority: .medium,
                 tags: ["здоровье", "врач"]
             ),
-            Task(
+            TaskItem(
                 title: "Изучить SwiftUI",
                 description: "Новые возможности iOS 17",
                 status: .idea,

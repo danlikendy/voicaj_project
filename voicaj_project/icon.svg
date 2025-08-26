@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Фон -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7B68EE;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="micGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F0F0F0;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Основной фон -->
+  <rect width="1024" height="1024" rx="200" fill="url(#bgGradient)"/>
+  
+  <!-- Микрофон -->
+  <g transform="translate(512, 512)">
+    <!-- Основание микрофона -->
+    <rect x="-40" y="120" width="80" height="20" rx="10" fill="url(#micGradient)"/>
+    
+    <!-- Корпус микрофона -->
+    <rect x="-30" y="-80" width="60" height="200" rx="30" fill="url(#micGradient)"/>
+    
+    <!-- Верхняя часть микрофона -->
+    <ellipse cx="0" cy="-80" rx="40" ry="20" fill="url(#micGradient)"/>
+    
+    <!-- Сетка микрофона -->
+    <circle cx="0" cy="-60" r="25" fill="none" stroke="#4A90E2" stroke-width="3" opacity="0.6"/>
+    <circle cx="0" cy="-60" r="15" fill="none" stroke="#4A90E2" stroke-width="2" opacity="0.4"/>
+  </g>
+  
+  <!-- Голосовые волны -->
+  <g transform="translate(512, 512)">
+    <!-- Волна 1 -->
+    <path d="M 200 -100 Q 250 -150 300 -100 T 400 -100" 
+          fill="none" stroke="white" stroke-width="8" opacity="0.8"/>
+    
+    <!-- Волна 2 -->
+    <path d="M 220 -80 Q 270 -130 320 -80 T 420 -80" 
+          fill="none" stroke="white" stroke-width="6" opacity="0.6"/>
+    
+    <!-- Волна 3 -->
+    <path d="M 240 -60 Q 290 -110 340 -60 T 440 -60" 
+          fill="none" stroke="white" stroke-width="4" opacity="0.4"/>
+    
+    <!-- Волны слева -->
+    <path d="M -200 -100 Q -250 -150 -300 -100 T -400 -100" 
+          fill="none" stroke="white" stroke-width="8" opacity="0.8"/>
+    
+    <path d="M -220 -80 Q -270 -130 -320 -80 T -420 -80" 
+          fill="none" stroke="white" stroke-width="6" opacity="0.6"/>
+    
+    <path d="M -240 -60 Q -290 -110 -340 -60 T -440 -60" 
+          fill="none" stroke="white" stroke-width="4" opacity="0.4"/>
+  </g>
+  
+  <!-- Точки активности -->
+  <g transform="translate(512, 512)">
+    <circle cx="180" cy="-120" r="8" fill="white" opacity="0.9"/>
+    <circle cx="200" cy="-140" r="6" fill="white" opacity="0.7"/>
+    <circle cx="220" cy="-160" r="4" fill="white" opacity="0.5"/>
+    
+    <circle cx="-180" cy="-120" r="8" fill="white" opacity="0.9"/>
+    <circle cx="-200" cy="-140" r="6" fill="white" opacity="0.7"/>
+    <circle cx="-220" cy="-160" r="4" fill="white" opacity="0.5"/>
+  </g>
+</svg>

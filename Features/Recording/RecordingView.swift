@@ -28,7 +28,7 @@ struct RecordingView: View {
             .navigationBarHidden(true)
         }
         .onAppear {
-            requestPermissions()
+            // Разрешения будут запрошены при нажатии кнопки записи
         }
         .alert("Ошибка", isPresented: Binding(
             get: { audioService.error != nil },
@@ -152,7 +152,9 @@ struct RecordingView: View {
                 if audioService.isRecording {
                     stopRecording()
                 } else {
-                    startRecording()
+                    Task {
+                        await startRecording()
+                    }
                 }
             }) {
                 ZStack {
@@ -307,15 +309,17 @@ struct RecordingView: View {
         // уже происходит в AudioRecordingService
     }
     
-    private func startRecording() {
+    private func startRecording() async {
         transcript = ""
-        audioService.startRecording()
+        await audioService.startRecording()
         
         // Для демонстрации добавляем тестовую транскрипцию
         // В реальном приложении это будет приходить от Speech Recognition
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            if audioService.isRecording {
-                transcript = "Сегодня сделал уборку в доме, купил продукты. Завтра нужно позвонить маме и записаться к врачу. Важно не забыть оплатить счета."
+        if audioService.isRecording {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                if audioService.isRecording {
+                    transcript = "Сегодня сделал уборку в доме, купил продукты. Завтра нужно позвонить маме и записаться к врачу. Важно не забыть оплатить счета."
+                }
             }
         }
     }
@@ -353,7 +357,7 @@ struct RecordingView: View {
 
 struct TaskResultsSection: View {
     let status: TaskStatus
-    let tasks: [Task]
+    let tasks: [TaskItem]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -388,7 +392,7 @@ struct TaskResultsSection: View {
 // MARK: - Task Result Row
 
 struct TaskResultRow: View {
-    let task: Task
+    let task: TaskItem
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -496,37 +500,7 @@ struct TemplatePickerSheet: View {
     }
 }
 
-// MARK: - Corner Radius Extension
-extension View {
-    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
-        clipShape(RoundedCorner(radius: radius, corners: corners))
-    }
-}
 
-struct UIRectCorner: OptionSet {
-    let rawValue: Int
-    
-    static let topLeft = UIRectCorner(rawValue: 1 << 0)
-    static let topRight = UIRectCorner(rawValue: 1 << 1)
-    static let bottomLeft = UIRectCorner(rawValue: 1 << 2)
-    static let bottomRight = UIRectCorner(rawValue: 1 << 3)
-    
-    static let allCorners: UIRectCorner = [.topLeft, .topRight, .bottomLeft, .bottomRight]
-}
-
-struct RoundedCorner: Shape {
-    var radius: CGFloat = .infinity
-    var corners: UIRectCorner = .allCorners
-
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(
-            roundedRect: rect,
-            byRoundingCorners: corners,
-            cornerRadii: CGSize(width: radius, height: radius)
-        )
-        return Path(path.cgPath)
-    }
-}
 
 #Preview {
     RecordingView()

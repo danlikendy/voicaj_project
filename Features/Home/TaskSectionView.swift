@@ -2,7 +2,7 @@ import SwiftUI
 
 struct TaskSectionView: View {
     let status: TaskStatus
-    let tasks: [Task]
+    let tasks: [TaskItem]
     let isCollapsed: Bool
     let onToggle: () -> Void
     
@@ -77,105 +77,110 @@ struct TaskSectionView: View {
 
 // MARK: - Task Row View
 struct TaskRowView: View {
-    let task: Task
+    let task: TaskItem
     @State private var showingTaskDetail = false
     
     var body: some View {
-        Button(action: {
-            showingTaskDetail = true
-        }) {
-            HStack(spacing: 16) {
-                // Checkbox
-                Button(action: {
-                    // TODO: Complete task
-                }) {
-                    Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 24))
-                        .foregroundColor(task.isCompleted ? ColorPalette.statusColor(for: .completed) : .tobacco)
-                }
-                .buttonStyle(PlainButtonStyle())
-                
-                // Task Content
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(task.title)
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.espresso)
-                            .lineLimit(1)
-                        
-                        Spacer()
-                        
-                        // Priority indicator
-                        if task.priority != .medium {
-                            Circle()
-                                .fill(ColorPalette.priorityColor(for: task.priority))
-                                .frame(width: 8, height: 8)
-                        }
-                        
-                        // Private indicator
-                        if task.isPrivate {
-                            Image(systemName: "lock.fill")
-                                .font(.system(size: 12))
-                                .foregroundColor(.tobacco)
-                        }
-                    }
-                    
-                    if let description = task.description {
-                        Text(description)
-                            .font(.system(size: 14))
-                            .foregroundColor(.tobacco)
-                            .lineLimit(1)
-                    }
-                    
-                    // Task metadata
-                    HStack(spacing: 12) {
-                        if let dueDate = task.dueDate {
-                            HStack(spacing: 4) {
-                                Image(systemName: "calendar")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.tobacco)
-                                
-                                Text(task.formattedDueDate)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(task.isOverdue ? .red : .tobacco)
-                            }
-                        }
-                        
-                        if !task.tags.isEmpty {
-                            HStack(spacing: 4) {
-                                Image(systemName: "tag.fill")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.tobacco)
-                                
-                                Text(task.tags.joined(separator: ", "))
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.tobacco)
-                                    .lineLimit(1)
-                            }
-                        }
-                        
-                        if task.audioURL != nil {
-                            Image(systemName: "waveform")
-                                .font(.system(size: 12))
-                                .foregroundColor(.tobacco)
-                        }
-                        
-                        Spacer()
-                    }
-                }
-                
-                // Status indicator
-                Circle()
-                    .fill(ColorPalette.statusColor(for: task.status))
-                    .frame(width: 12, height: 12)
+        HStack(spacing: 16) {
+            // Checkbox - отдельная кнопка
+            Button(action: {
+                // TODO: Complete task
+                print("✅ Отметить задачу выполненной: \(task.title)")
+                // В будущем здесь будет логика изменения статуса
+            }) {
+                Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 24))
+                    .foregroundColor(task.isCompleted ? ColorPalette.statusColor(for: .completed) : .tobacco)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
+            .buttonStyle(PlainButtonStyle())
+            
+            // Основная область задачи - кликабельна полностью
+            Button(action: {
+                showingTaskDetail = true
+            }) {
+                HStack(spacing: 0) {
+                    // Task Content
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(task.title)
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.espresso)
+                                .lineLimit(1)
+                            
+                            Spacer()
+                            
+                            // Priority indicator
+                            if task.priority != .medium {
+                                Circle()
+                                    .fill(ColorPalette.priorityColor(for: task.priority))
+                                    .frame(width: 8, height: 8)
+                            }
+                            
+                            // Private indicator
+                            if task.isPrivate {
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.tobacco)
+                            }
+                        }
+                        
+                        if let description = task.description {
+                            Text(description)
+                                .font(.system(size: 14))
+                                .foregroundColor(.tobacco)
+                                .lineLimit(1)
+                        }
+                        
+                        // Task metadata
+                        HStack(spacing: 12) {
+                            if let dueDate = task.dueDate {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "calendar")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.tobacco)
+                                    
+                                    Text(task.formattedDueDate)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(task.isOverdue ? .red : .tobacco)
+                                }
+                            }
+                            
+                            if !task.tags.isEmpty {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "tag.fill")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.tobacco)
+                                    
+                                    Text(task.tags.joined(separator: ", "))
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.tobacco)
+                                        .lineLimit(1)
+                                }
+                            }
+                            
+                            if task.audioURL != nil {
+                                Image(systemName: "waveform")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.tobacco)
+                            }
+                            
+                            Spacer()
+                        }
+                    }
+                    
+                    // Status indicator
+                    Circle()
+                        .fill(ColorPalette.statusColor(for: task.status))
+                        .frame(width: 12, height: 12)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(PlainButtonStyle())
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
         .sheet(isPresented: $showingTaskDetail) {
-            // TODO: Show task detail view
-            Text("Task Detail View")
+            TaskDetailView(task: task)
         }
     }
 }
@@ -187,17 +192,7 @@ extension View {
     }
 }
 
-// MARK: - UIRectCorner
-struct UIRectCorner: OptionSet {
-    let rawValue: Int
-    
-    static let topLeft = UIRectCorner(rawValue: 1 << 0)
-    static let topRight = UIRectCorner(rawValue: 1 << 1)
-    static let bottomLeft = UIRectCorner(rawValue: 1 << 2)
-    static let bottomRight = UIRectCorner(rawValue: 1 << 3)
-    
-    static let allCorners: UIRectCorner = [.topLeft, .topRight, .bottomLeft, .bottomRight]
-}
+import UIKit
 
 struct RoundedCorner: Shape {
     var radius: CGFloat = .infinity
@@ -218,8 +213,8 @@ struct RoundedCorner: Shape {
         TaskSectionView(
             status: .planned,
             tasks: [
-                Task(title: "Sample Task 1", description: "Description 1"),
-                Task(title: "Sample Task 2", description: "Description 2")
+                TaskItem(title: "Sample Task 1", description: "Description 1"),
+                TaskItem(title: "Sample Task 2", description: "Description 2")
             ],
             isCollapsed: false
         ) {}

@@ -2,8 +2,42 @@ import SwiftUI
 
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
-    @State private var showingRecording = false
+    @State private var isRecording = false
+    @State private var recordingTime: TimeInterval = 0
+    @State private var recordingTimer: Timer?
     @State private var selectedFilter: String?
+    @State private var filteredTasks: [TaskItem] = []
+    
+    // MARK: - Recording Functions
+    private func startRecording() {
+        isRecording = true
+        recordingTime = 0
+        
+        // Запускаем таймер
+        recordingTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            recordingTime += 1
+        }
+        
+        // TODO: Здесь будет реальная запись аудио
+        print("🎤 Начало записи")
+    }
+    
+    private func stopRecording() {
+        isRecording = false
+        
+        // Останавливаем таймер
+        recordingTimer?.invalidate()
+        recordingTimer = nil
+        
+        // TODO: Здесь будет остановка записи и анализ
+        print("⏹️ Остановка записи")
+    }
+    
+    private func formatTime(_ time: TimeInterval) -> String {
+        let minutes = Int(time) / 60
+        let seconds = Int(time) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
     
     var body: some View {
         NavigationView {
@@ -24,12 +58,49 @@ struct HomeView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
             }
+            .refreshable {
+                // Обновляем данные при pull-to-refresh
+                await refreshData()
+            }
+            .onAppear {
+                // Инициализируем отфильтрованные задачи
+                filteredTasks = viewModel.tasks
+            }
+            .onChange(of: selectedFilter) { newFilter in
+                if let filter = newFilter {
+                    filteredTasks = viewModel.tasks.filter { task in
+                        task.tags.contains { tag in
+                            tag.lowercased().contains(filter.lowercased())
+                        }
+                    }
+                } else {
+                    filteredTasks = viewModel.tasks
+                }
+            }
+            .overlay(
+                // Верхний градиент для плавного перехода
+                VStack {
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color.bone.opacity(0.95),
+                            Color.bone.opacity(0.8),
+                            Color.bone.opacity(0.6),
+                            Color.bone.opacity(0.3),
+                            Color.bone.opacity(0)
+                        ]),
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: 120)
+                    Spacer()
+                }
+                .allowsHitTesting(false) // Чтобы градиент не блокировал нажатия
+                .ignoresSafeArea(.all, edges: .top) // Игнорируем safe area сверху
+            )
             .background(Color.bone)
             .navigationBarHidden(true)
         }
-        .sheet(isPresented: $showingRecording) {
-            RecordingView()
-        }
+
     }
     
     // MARK: - Header View
@@ -38,12 +109,12 @@ struct HomeView: View {
             // Current Date
             VStack(alignment: .leading, spacing: 4) {
                 Text(viewModel.currentDateString)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.tobacco)
-                
-                Text(viewModel.currentDayString)
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 18, weight: .medium))
                     .foregroundColor(.espresso)
+                
+                Text("Сегодня")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(.tobacco)
             }
             
             Spacer()
@@ -60,17 +131,21 @@ struct HomeView: View {
             
             // Streak Indicator
             VStack(alignment: .trailing, spacing: 4) {
-                HStack(spacing: 4) {
+                HStack(spacing: 6) {
                     Image(systemName: "flame.fill")
                         .foregroundColor(.orange)
-                    Text("\(viewModel.currentStreak)")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.espresso)
+                        .font(.system(size: 16))
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(viewModel.currentStreak)")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.espresso)
+                        
+                        Text("дней")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.tobacco)
+                    }
                 }
-                
-                Text("дней подряд")
-                    .font(.system(size: 12))
-                    .foregroundColor(.tobacco)
             }
         }
         .padding(.horizontal, 20)
@@ -83,15 +158,19 @@ struct HomeView: View {
     private var mainRecordingButton: some View {
         VStack(spacing: 16) {
             Button(action: {
-                showingRecording = true
+                if isRecording {
+                    stopRecording()
+                } else {
+                    startRecording()
+                }
             }) {
                 ZStack {
                     Circle()
-                        .fill(Color.cornflowerBlue)
+                        .fill(isRecording ? Color.terracotta : Color.cornflowerBlue)
                         .frame(width: 88, height: 88)
                         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                     
-                    Image(systemName: "mic.fill")
+                    Image(systemName: isRecording ? "stop.fill" : "mic.fill")
                         .font(.system(size: 32, weight: .medium))
                         .foregroundColor(.white)
                 }
@@ -99,10 +178,17 @@ struct HomeView: View {
             .scaleEffect(viewModel.isRecordingButtonPulsing ? 1.1 : 1.0)
             .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: viewModel.isRecordingButtonPulsing)
             
-            Text(viewModel.recordingButtonText)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.espresso)
-                .multilineTextAlignment(.center)
+            if isRecording {
+                Text(formatTime(recordingTime))
+                    .font(.system(size: 16, weight: .medium, design: .monospaced))
+                    .foregroundColor(.espresso)
+                    .multilineTextAlignment(.center)
+            } else {
+                Text("Запишите итог дня")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.espresso)
+                    .multilineTextAlignment(.center)
+            }
         }
     }
     
@@ -118,11 +204,17 @@ struct HomeView: View {
             }
             
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 12) {
-                ForEach(VoiceTemplate.allCases.prefix(3), id: \.self) { template in
-                    QuickActionCard(template: template) {
-                        // TODO: Open recording with template
-                    }
-                }
+                                        ForEach(VoiceTemplate.allCases.prefix(3), id: \.self) { template in
+                            QuickActionCard(template: template) {
+                                // TODO: Open recording with template
+                                print("🚀 Быстрое действие: \(template.displayName)")
+                                // В будущем здесь будет открытие экрана записи с шаблоном
+                                // Согласно плану: "Быстрые действия → экран «Запись» с предустановленным шаблоном"
+                                
+                                // Пока что просто показываем сообщение о выбранном шаблоне
+                                // TODO: Добавить переход на экран записи с выбранным шаблоном
+                            }
+                        }
             }
         }
     }
@@ -138,7 +230,9 @@ struct HomeView: View {
                 ForEach(TaskStatus.allCases, id: \.self) { status in
                     TaskSectionView(
                         status: status,
-                        tasks: viewModel.tasksForStatus(status),
+                        tasks: selectedFilter != nil ? 
+                            filteredTasks.filter { $0.status == status } : 
+                            viewModel.tasksForStatus(status),
                         isCollapsed: viewModel.collapsedSections.contains(status)
                     ) {
                         viewModel.toggleSection(status)
@@ -210,6 +304,20 @@ struct FilterChip: View {
                 .padding(.vertical, 8)
                 .background(isSelected ? Color.cornflowerBlue : Color.linen)
                 .cornerRadius(20)
+        }
+    }
+}
+
+// MARK: - Data Refresh
+extension HomeView {
+    private func refreshData() async {
+        // Имитируем задержку обновления
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        
+        await MainActor.run {
+            // Обновляем отфильтрованные задачи
+            filteredTasks = viewModel.tasks
+            print("🔄 Данные обновлены")
         }
     }
 }

@@ -30,37 +30,64 @@ class AudioRecordingService: NSObject, ObservableObject {
     
     private func setupSpeechRecognition() {
         speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "ru-RU"))
+    }
+    
+    // MARK: - Permission Requests
+    
+    func requestPermissions() async -> Bool {
+        // Запрашиваем разрешение на микрофон
+        let audioStatus = await requestAudioPermission()
         
-        SFSpeechRecognizer.requestAuthorization { [weak self] status in
-            DispatchQueue.main.async {
-                switch status {
-                case .authorized:
-                    break
-                case .denied, .restricted, .notDetermined:
-                    self?.error = "Нет доступа к распознаванию речи"
-                @unknown default:
-                    self?.error = "Неизвестная ошибка доступа к распознаванию речи"
-                }
+        // Запрашиваем разрешение на распознавание речи
+        let speechStatus = await requestSpeechPermission()
+        
+        return audioStatus && speechStatus
+    }
+    
+    private func requestAudioPermission() async -> Bool {
+        return await withCheckedContinuation { continuation in
+            audioSession.requestRecordPermission { granted in
+                continuation.resume(returning: granted)
+            }
+        }
+    }
+    
+    private func requestSpeechPermission() async -> Bool {
+        return await withCheckedContinuation { continuation in
+            SFSpeechRecognizer.requestAuthorization { status in
+                continuation.resume(returning: status == .authorized)
             }
         }
     }
     
     // MARK: - Recording Control
     
-    func startRecording() {
+    func startRecording() async {
+        // Проверяем разрешения перед началом записи
+        guard await requestPermissions() else {
+            await MainActor.run {
+                self.error = "Необходимы разрешения на микрофон и распознавание речи"
+            }
+            return
+        }
+        
         do {
             try setupAudioSession()
             try startAudioRecording()
             try startSpeechRecognition()
             
-            isRecording = true
-            isPaused = false
-            recordingDuration = 0
+            await MainActor.run {
+                isRecording = true
+                isPaused = false
+                recordingDuration = 0
+            }
             
             startTimers()
             
         } catch {
-            self.error = "Ошибка начала записи: \(error.localizedDescription)"
+            await MainActor.run {
+                self.error = "Ошибка начала записи: \(error.localizedDescription)"
+            }
         }
     }
     
