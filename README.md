@@ -12,7 +12,7 @@
 
 ## О проекте
 
-**Voicaj** — это инновационное iOS-приложение, которое превращает голосовые заметки в структурированные задачи и планы. Используя передовые технологии распознавания речи и искусственного интеллекта, приложение помогает пользователям эффективно организовывать свою жизнь через естественное голосовое взаимодействие.
+**Voicaj** — это инновационное iOS-приложение, которое превращает голосовые заметки в структурированные задачи и планы. Используя передовые технологии распознавания речи и искусственного интеллекта, приложение помогает пользователям эффективно организовывать свою жизнь через естественное голосовое взаимодействие
 
 ### Ключевые особенности
 
@@ -43,18 +43,18 @@ voicaj_project/
 │   ├── VoiceActionJournalApp.swift
 │   └── ContentView.swift
 ├── Core/                   # Ядро приложения
-│   ├── Models/            # Модели данных
-│   ├── Services/          # Бизнес-логика
-│   └── Utils/             # Утилиты и хелперы
+│   ├── Models/             # Модели данных
+│   ├── Services/           # Бизнес-логика
+│   └── Utils/              # Утилиты и хелперы
 ├── Features/               # Функциональные модули
-│   ├── Home/              # Главный экран
-│   ├── Recording/         # Запись голоса
-│   ├── Timeline/          # Временная шкала
-│   ├── Analytics/         # Аналитика
-│   ├── Calendar/          # Календарь
-│   └── Chat/              # Чат с AI
+│   ├── Home/               # Главный экран
+│   ├── Recording/          # Запись голоса
+│   ├── Timeline/           # Временная шкала
+│   ├── Analytics/          # Аналитика
+│   ├── Calendar/           # Календарь
+│   └── Chat/               # Чат с AI
 └── Resources/              # Ресурсы
-    ├── Assets.xcassets    # Иконки и изображения
+    ├── Assets.xcassets     # Иконки и изображения
     └── Localizable.strings # Локализация
 ```
 
@@ -73,7 +73,7 @@ voicaj_project/
 
 1. **Клонируйте репозиторий**
    ```bash
-   git clone https://github.com/yourusername/voicaj_project.git
+   git clone https://github.com/luvgreyair/voicaj_project.git
    cd voicaj_project
    ```
 
@@ -96,7 +96,7 @@ voicaj_project/
 
 ### Палитра цветов
 
-Приложение использует гармоничную систему цветовых токенов согласно [пункту 11 плана разработки](DEVELOPMENT_PLAN.md#пункт-11--палитра-цветов):
+Приложение использует гармоничную систему цветовых токенов согласно:
 
 #### Светлая тема (Warm Light)
 - **Background**: Bone (#F7F2EB) — теплый белый
@@ -228,7 +228,7 @@ voicaj_project/
 
 ## Вклад в проект
 
-Мы приветствуем вклад в развитие Voicaj! Если у вас есть идеи, исправления или новые функции — создавайте Issues и Pull Requests.
+Мы приветствуем вклад в развитие Voicaj! Если у вас есть идеи, исправления или новые функции — создавайте Issues и Pull Requests
 
 ### Как внести вклад
 
@@ -249,33 +249,33 @@ voicaj_project/
 
 ## Лицензия
 
-Этот проект распространяется под лицензией MIT. См. файл [LICENSE](LICENSE) для подробностей.
+Этот проект распространяется под лицензией MIT. См. файл [LICENSE](LICENSE) для подробностей
 
 ---
 
 ## Команда
 
-- **Разработчик**: [Ваше имя](https://github.com/yourusername)
-- **Дизайнер**: [Имя дизайнера](https://github.com/designerusername)
-- **Тестировщик**: [Имя тестировщика](https://github.com/testerusername)
+- **Разработчик**: [Ваше имя](https://github.com/luvgreyair)
+- **Дизайнер**: [Имя дизайнера](https://github.com/luvgreyair)
+- **Тестировщик**: [Имя тестировщика](https://github.com/luvgreyair)
 
 ---
 
 ## Поддержка
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/voicaj_project/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/voicaj_project/discussions)
-- **Email**: support@voicaj.app
-- **Telegram**: [@voicaj_support](https://t.me/voicaj_support)
+- **Issues**: [GitHub Issues](https://github.com/luvgreyair/voicaj_project/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/luvgreyair/voicaj_project/discussions)
+- **Email**: luvgreyair@vk.com
+- **Telegram**: [@luvgreyair](https://t.me/luvgreyair)
 
 ---
 
 ## Благодарности
 
-- [Apple](https://developer.apple.com/) за SwiftUI и iOS SDK
-- [OpenAI](https://openai.com/) за вдохновение в AI-функциях
-- [Figma](https://figma.com/) за инструменты дизайна
-- Всем [контрибьюторам](https://github.com/yourusername/voicaj_project/graphs/contributors) проекта
+- [Apple](https://developer.apple.com) за SwiftUI и iOS SDK
+- [OpenAI](https://openai.com) за вдохновение в AI-функциях
+- [Figma](https://figma.com) за инструменты дизайна
+- Всем [контрибьюторам](https://github.com/luvgreyair/voicaj_project/graphs/contributors) проекта
 
 ---
 
