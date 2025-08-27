@@ -45,9 +45,13 @@ class AudioRecordingService: NSObject, ObservableObject {
     }
     
     private func requestAudioPermission() async -> Bool {
-        return await withCheckedContinuation { continuation in
-            audioSession.requestRecordPermission { granted in
-                continuation.resume(returning: granted)
+        if #available(iOS 17.0, *) {
+            return await AVAudioApplication.requestRecordPermission()
+        } else {
+            return await withCheckedContinuation { continuation in
+                audioSession.requestRecordPermission { granted in
+                    continuation.resume(returning: granted)
+                }
             }
         }
     }
@@ -189,7 +193,7 @@ class AudioRecordingService: NSObject, ObservableObject {
                 return
             }
             
-            if let result = result {
+            if result != nil {
                 DispatchQueue.main.async {
                     // Здесь можно обновить транскрипт в реальном времени
                     // self?.transcript = result.bestTranscription.formattedString

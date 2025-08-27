@@ -33,7 +33,8 @@ struct ContentView: View {
                     Text("Чат")
                 }
         }
-        .accentColor(.cornflowerBlue)
+        .accentColor(.honeyGold)
+        .preferredColorScheme(.light) // Принудительно используем светлую тему
         .onAppear {
             // Настройка внешнего вида TabBar для эффекта стекла согласно пункту 11
             let appearance = UITabBarAppearance()
@@ -46,17 +47,17 @@ struct ContentView: View {
             appearance.shadowImage = UIImage()
             
             // Настройка цветов согласно палитре пункта 11
-            // Активное состояние: Cornflower Blue (#6A8CCB) - В планах
-            appearance.stackedLayoutAppearance.selected.iconColor = UIColor(ColorPalette.Light.cornflowerBlue)
+            // Активное состояние: Honey Gold (#D4A574) - согласно брендбуку
+            appearance.stackedLayoutAppearance.selected.iconColor = UIColor(Color.honeyGold)
             appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
-                .foregroundColor: UIColor(ColorPalette.Light.cornflowerBlue),
+                .foregroundColor: UIColor(Color.honeyGold),
                 .font: UIFont.systemFont(ofSize: 10, weight: .medium)
             ]
             
             // Неактивное состояние: Tobacco (#5B514A) - темнее для лучшей видимости
-            appearance.stackedLayoutAppearance.normal.iconColor = UIColor(ColorPalette.Light.textSecondary)
+            appearance.stackedLayoutAppearance.normal.iconColor = UIColor(Color.tobacco)
             appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
-                .foregroundColor: UIColor(ColorPalette.Light.textSecondary),
+                .foregroundColor: UIColor(Color.tobacco),
                 .font: UIFont.systemFont(ofSize: 10, weight: .medium)
             ]
             
@@ -68,7 +69,8 @@ struct ContentView: View {
             
             // Принудительно применяем стили
             DispatchQueue.main.async {
-                if let tabBar = UIApplication.shared.windows.first?.rootViewController?.tabBarController?.tabBar {
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let tabBar = windowScene.windows.first?.rootViewController?.tabBarController?.tabBar {
                     tabBar.standardAppearance = appearance
                     tabBar.scrollEdgeAppearance = appearance
                     tabBar.layer.cornerRadius = 20

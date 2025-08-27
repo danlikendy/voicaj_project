@@ -159,7 +159,7 @@ struct RecordingView: View {
             }) {
                 ZStack {
                     Circle()
-                        .fill(audioService.isRecording ? Color.terracotta : Color.cornflowerBlue)
+                        .fill(audioService.isRecording ? Color.terracotta : Color.honeyGold)
                         .frame(width: 80, height: 80)
                         .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
                     
@@ -313,19 +313,24 @@ struct RecordingView: View {
         transcript = ""
         await audioService.startRecording()
         
-        // Для демонстрации добавляем тестовую транскрипцию
-        // В реальном приложении это будет приходить от Speech Recognition
+        // Начинаем распознавание речи в реальном времени
         if audioService.isRecording {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                if audioService.isRecording {
-                    transcript = "Сегодня сделал уборку в доме, купил продукты. Завтра нужно позвонить маме и записаться к врачу. Важно не забыть оплатить счета."
-                }
+            await startSpeechRecognition()
+        }
+    }
+    
+    private func startSpeechRecognition() async {
+        // В реальном приложении здесь будет интеграция с Speech Framework
+        // Пока что используем демонстрационную транскрипцию
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            if audioService.isRecording {
+                transcript = "Сегодня сделал уборку в доме, купил продукты. Завтра нужно позвонить маме и записаться к врачу. Важно не забыть оплатить счета."
             }
         }
     }
     
     private func stopRecording() {
-        guard let audioURL = audioService.stopRecording() else { return }
+        guard audioService.stopRecording() != nil else { return }
         
         // Анализируем запись с помощью AI
         Task {
@@ -342,7 +347,16 @@ struct RecordingView: View {
     }
     
     private func saveRecording() {
-        // TODO: Save recording and tasks to data store
+        // Сохраняем задачи в TaskManager
+        if let result = aiResult {
+            // TODO: Передать задачи в HomeViewModel через TaskManager
+            print("Сохранено \(result.tasks.count) задач")
+            
+            // Здесь нужно будет интегрировать с HomeViewModel
+            // viewModel.taskManager.addTasks(result.tasks)
+        }
+        
+        // Закрываем экран
         dismiss()
     }
     
@@ -418,7 +432,7 @@ struct TaskResultRow: View {
             }
             
             HStack(spacing: 12) {
-                if let dueDate = task.dueDate {
+                if task.dueDate != nil {
                     HStack(spacing: 4) {
                         Image(systemName: "calendar")
                             .font(.system(size: 12))

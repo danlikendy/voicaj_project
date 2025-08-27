@@ -68,29 +68,82 @@ class AIAnalysisService: ObservableObject {
     private func extractTaskFromSentence(_ sentence: String, template: VoiceTemplate?) async -> TaskItem? {
         let lowercased = sentence.lowercased()
         
-        // Определяем статус задачи
+        // Определяем статус задачи на основе шаблона и контекста
         let status: TaskStatus
         let priority: TaskPriority
         
-        if lowercased.contains("сделал") || lowercased.contains("выполнил") || lowercased.contains("закончил") {
-            status = .completed
-            priority = .medium
-        } else if lowercased.contains("важно") || lowercased.contains("срочно") || lowercased.contains("критично") {
-            status = .important
-            priority = .high
-        } else if lowercased.contains("завтра") || lowercased.contains("потом") || lowercased.contains("позже") {
-            status = .planned
-            priority = .medium
-        } else if lowercased.contains("не успел") || lowercased.contains("не смог") || lowercased.contains("проблема") {
-            status = .stuck
-            priority = .high
-        } else if lowercased.contains("идея") || lowercased.contains("мысль") || lowercased.contains("план") {
-            status = .idea
-            priority = .low
+        // Анализируем по шаблону
+        if let template = template {
+            switch template {
+            case .dailySummary:
+                if lowercased.contains("сделал") || lowercased.contains("выполнил") || lowercased.contains("закончил") {
+                    status = .completed
+                    priority = .medium
+                } else if lowercased.contains("не успел") || lowercased.contains("не смог") {
+                    status = .stuck
+                    priority = .high
+                } else {
+                    status = .idea
+                    priority = .low
+                }
+            case .tomorrowPlan:
+                status = .planned
+                priority = lowercased.contains("важно") || lowercased.contains("срочно") ? .high : .medium
+            case .weeklyPlan:
+                status = .planned
+                priority = .medium
+            case .quickNote:
+                status = .idea
+                priority = .low
+            case .retro:
+                if lowercased.contains("проблема") || lowercased.contains("застрял") {
+                    status = .stuck
+                    priority = .high
+                } else {
+                    status = .idea
+                    priority = .medium
+                }
+            case .custom:
+                // Анализируем по контексту
+                if lowercased.contains("сделал") || lowercased.contains("выполнил") {
+                    status = .completed
+                    priority = .medium
+                } else if lowercased.contains("важно") || lowercased.contains("срочно") {
+                    status = .important
+                    priority = .high
+                } else if lowercased.contains("завтра") || lowercased.contains("потом") {
+                    status = .planned
+                    priority = .medium
+                } else if lowercased.contains("не успел") || lowercased.contains("проблема") {
+                    status = .stuck
+                    priority = .high
+                } else {
+                    status = .planned
+                    priority = .medium
+                }
+            }
         } else {
-            // По умолчанию - план
-            status = .planned
-            priority = .medium
+            // Анализируем по контексту без шаблона
+            if lowercased.contains("сделал") || lowercased.contains("выполнил") || lowercased.contains("закончил") {
+                status = .completed
+                priority = .medium
+            } else if lowercased.contains("важно") || lowercased.contains("срочно") || lowercased.contains("критично") {
+                status = .important
+                priority = .high
+            } else if lowercased.contains("завтра") || lowercased.contains("потом") || lowercased.contains("позже") {
+                status = .planned
+                priority = .medium
+            } else if lowercased.contains("не успел") || lowercased.contains("не смог") || lowercased.contains("проблема") {
+                status = .stuck
+                priority = .high
+            } else if lowercased.contains("идея") || lowercased.contains("мысль") || lowercased.contains("план") {
+                status = .idea
+                priority = .low
+            } else {
+                // По умолчанию - план
+                status = .planned
+                priority = .medium
+            }
         }
         
         // Извлекаем дату

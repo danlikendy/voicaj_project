@@ -59,7 +59,7 @@ struct TaskSectionView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "plus.circle")
                         .font(.system(size: 24))
-                        .foregroundColor(.tobacco)
+                        .foregroundColor(.honeyGold)
                     
                     Text("Нет задач в этом разделе")
                         .font(.system(size: 14))
@@ -86,11 +86,10 @@ struct TaskRowView: View {
             Button(action: {
                 // TODO: Complete task
                 print("✅ Отметить задачу выполненной: \(task.title)")
-                // В будущем здесь будет логика изменения статуса
             }) {
-                Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
+                Image(systemName: task.status == .completed ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 24))
-                    .foregroundColor(task.isCompleted ? ColorPalette.statusColor(for: .completed) : .tobacco)
+                    .foregroundColor(task.status == .completed ? ColorPalette.statusColor(for: .completed) : .tobacco)
             }
             .buttonStyle(PlainButtonStyle())
             
@@ -133,7 +132,7 @@ struct TaskRowView: View {
                         
                         // Task metadata
                         HStack(spacing: 12) {
-                            if let dueDate = task.dueDate {
+                            if task.dueDate != nil {
                                 HStack(spacing: 4) {
                                     Image(systemName: "calendar")
                                         .font(.system(size: 12))

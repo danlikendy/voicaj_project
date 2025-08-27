@@ -4,6 +4,9 @@ struct TaskDetailView: View {
     let task: TaskItem
     @Environment(\.dismiss) private var dismiss
     
+    @State private var showingEditSheet = false
+    @State private var showingDeleteAlert = false
+    
     var body: some View {
         NavigationView {
             ScrollView {
@@ -29,15 +32,8 @@ struct TaskDetailView: View {
             }
             .background(Color.bone)
             .navigationTitle("Детали задачи")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Готово") {
-                        dismiss()
-                    }
-                    .foregroundColor(.cornflowerBlue)
-                }
-            }
+            .navigationBarTitleDisplayMode(.large)
+
         }
     }
     
@@ -73,6 +69,7 @@ struct TaskDetailView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
         .background(Color.porcelain)
@@ -91,6 +88,7 @@ struct TaskDetailView: View {
                 .foregroundColor(.tobacco)
                 .lineLimit(nil)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
         .background(Color.porcelain)
@@ -106,7 +104,7 @@ struct TaskDetailView: View {
             
             VStack(spacing: 12) {
                 // Due Date
-                if let dueDate = task.dueDate {
+                if task.dueDate != nil {
                     HStack {
                         Image(systemName: "calendar")
                             .foregroundColor(.tobacco)
@@ -158,6 +156,7 @@ struct TaskDetailView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
         .background(Color.porcelain)
@@ -167,31 +166,23 @@ struct TaskDetailView: View {
     // MARK: - Actions View
     private var actionsView: some View {
         VStack(spacing: 12) {
-                               Button(action: {
-                       // TODO: Edit task
-                       print("✏️ Редактирование задачи: \(task.title)")
-                       // В будущем здесь будет открытие экрана редактирования
-                       // Пока что просто показываем сообщение
-                       // TODO: Добавить алерт или переход на экран редактирования
-                   }) {
+            Button(action: {
+                showingEditSheet = true
+            }) {
                 HStack {
                     Image(systemName: "pencil")
                     Text("Редактировать")
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(Color.cornflowerBlue)
+                .background(Color.honeyGold)
                 .foregroundColor(.white)
                 .cornerRadius(12)
             }
             
-                               Button(action: {
-                       // TODO: Delete task
-                       print("🗑️ Удаление задачи: \(task.title)")
-                       // В будущем здесь будет логика удаления
-                       // Пока что просто показываем сообщение
-                       // TODO: Добавить подтверждение удаления
-                   }) {
+            Button(action: {
+                showingDeleteAlert = true
+            }) {
                 HStack {
                     Image(systemName: "trash")
                     Text("Удалить")
@@ -202,6 +193,20 @@ struct TaskDetailView: View {
                 .foregroundColor(.white)
                 .cornerRadius(12)
             }
+        }
+        .sheet(isPresented: $showingEditSheet) {
+            TaskEditView(task: task)
+                .presentationDetents([.large, .medium])
+        }
+        .alert("Удалить задачу?", isPresented: $showingDeleteAlert) {
+            Button("Отмена", role: .cancel) { }
+            Button("Удалить", role: .destructive) {
+                // TODO: Delete task
+                print("🗑️ Удаление задачи: \(task.title)")
+                dismiss()
+            }
+        } message: {
+            Text("Это действие нельзя отменить.")
         }
     }
     

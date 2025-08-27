@@ -62,11 +62,12 @@ struct HomeView: View {
                 // Обновляем данные при pull-to-refresh
                 await refreshData()
             }
+            .tint(.espresso) // Исправляем цвет иконки обновления
             .onAppear {
                 // Инициализируем отфильтрованные задачи
                 filteredTasks = viewModel.tasks
             }
-            .onChange(of: selectedFilter) { newFilter in
+            .onChange(of: selectedFilter) { _, newFilter in
                 if let filter = newFilter {
                     filteredTasks = viewModel.tasks.filter { task in
                         task.tags.contains { tag in
@@ -82,16 +83,16 @@ struct HomeView: View {
                 VStack {
                     LinearGradient(
                         gradient: Gradient(colors: [
-                            Color.bone.opacity(0.95),
-                            Color.bone.opacity(0.8),
-                            Color.bone.opacity(0.6),
-                            Color.bone.opacity(0.3),
+                            Color.bone.opacity(0.98),
+                            Color.bone.opacity(0.9),
+                            Color.bone.opacity(0.7),
+                            Color.bone.opacity(0.4),
                             Color.bone.opacity(0)
                         ]),
                         startPoint: .top,
                         endPoint: .bottom
                     )
-                    .frame(height: 120)
+                    .frame(height: 80)
                     Spacer()
                 }
                 .allowsHitTesting(false) // Чтобы градиент не блокировал нажатия
@@ -132,8 +133,8 @@ struct HomeView: View {
             // Streak Indicator
             VStack(alignment: .trailing, spacing: 4) {
                 HStack(spacing: 6) {
-                    Image(systemName: "flame.fill")
-                        .foregroundColor(.orange)
+                    Image(systemName: "bolt.fill")
+                        .foregroundColor(.honeyGold)
                         .font(.system(size: 16))
                     
                     VStack(alignment: .leading, spacing: 2) {
@@ -166,7 +167,7 @@ struct HomeView: View {
             }) {
                 ZStack {
                     Circle()
-                        .fill(isRecording ? Color.terracotta : Color.cornflowerBlue)
+                        .fill(isRecording ? Color.terracotta : Color.honeyGold)
                         .frame(width: 88, height: 88)
                         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                     
@@ -274,7 +275,7 @@ struct QuickActionCard: View {
             VStack(spacing: 8) {
                 Image(systemName: template.icon)
                     .font(.system(size: 24))
-                    .foregroundColor(.cornflowerBlue)
+                    .foregroundColor(.honeyGold)
                 
                 Text(template.displayName)
                     .font(.system(size: 12, weight: .medium))
@@ -302,7 +303,7 @@ struct FilterChip: View {
                 .foregroundColor(isSelected ? .white : .espresso)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(isSelected ? Color.cornflowerBlue : Color.linen)
+                .background(isSelected ? Color.honeyGold : Color.linen)
                 .cornerRadius(20)
         }
     }
