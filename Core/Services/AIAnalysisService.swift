@@ -95,26 +95,28 @@ class AIAnalysisService: ObservableObject {
             case .quickNote:
                 status = .idea
                 priority = .low
-            case .retro:
-                if lowercased.contains("проблема") || lowercased.contains("застрял") {
+            case .meetingNotes:
+                status = .planned
+                priority = lowercased.contains("важно") || lowercased.contains("срочно") ? .high : .medium
+            case .projectUpdate:
+                if lowercased.contains("завершил") || lowercased.contains("сделал") {
+                    status = .completed
+                    priority = .medium
+                } else if lowercased.contains("проблема") || lowercased.contains("застрял") {
                     status = .stuck
                     priority = .high
                 } else {
-                    status = .idea
-                    priority = .medium
-                }
-            case .custom:
-                // Анализируем по контексту
-                if lowercased.contains("сделал") || lowercased.contains("выполнил") {
-                    status = .completed
-                    priority = .medium
-                } else if lowercased.contains("важно") || lowercased.contains("срочно") {
-                    status = .important
-                    priority = .high
-                } else if lowercased.contains("завтра") || lowercased.contains("потом") {
                     status = .planned
                     priority = .medium
-                } else if lowercased.contains("не успел") || lowercased.contains("проблема") {
+                }
+            case .meetingNotes:
+                status = .planned
+                priority = lowercased.contains("важно") || lowercased.contains("срочно") ? .high : .medium
+            case .projectUpdate:
+                if lowercased.contains("завершил") || lowercased.contains("сделал") {
+                    status = .completed
+                    priority = .medium
+                } else if lowercased.contains("проблема") || lowercased.contains("застрял") {
                     status = .stuck
                     priority = .high
                 } else {

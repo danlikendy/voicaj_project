@@ -21,42 +21,9 @@ struct HomeFilterChip: View {
 
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
-    @State private var isRecording = false
-    @State private var recordingTime: TimeInterval = 0
-    @State private var recordingTimer: Timer?
     @State private var selectedFilter: String?
     @State private var filteredTasks: [TaskItem] = []
-    
-    // MARK: - Recording Functions
-    private func startRecording() {
-        isRecording = true
-        recordingTime = 0
-        
-        // Запускаем таймер
-        recordingTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            recordingTime += 1
-        }
-        
-        // TODO: Здесь будет реальная запись аудио
-        print("🎤 Начало записи")
-    }
-    
-    private func stopRecording() {
-        isRecording = false
-        
-        // Останавливаем таймер
-        recordingTimer?.invalidate()
-        recordingTimer = nil
-        
-        // TODO: Здесь будет остановка записи и анализ
-        print("⏹️ Остановка записи")
-    }
-    
-    private func formatTime(_ time: TimeInterval) -> String {
-        let minutes = Int(time) / 60
-        let seconds = Int(time) % 60
-        return String(format: "%02d:%02d", minutes, seconds)
-    }
+    @State private var showingRecordingView = false
     
     var body: some View {
         NavigationView {
@@ -100,6 +67,9 @@ struct HomeView: View {
                 } else {
                     filteredTasks = viewModel.tasks
                 }
+            }
+            .sheet(isPresented: $showingRecordingView) {
+                RecordingView()
             }
             .overlay(
                 // Верхний градиент для плавного перехода
@@ -182,19 +152,15 @@ struct HomeView: View {
     private var mainRecordingButton: some View {
         VStack(spacing: 16) {
             Button(action: {
-                if isRecording {
-                    stopRecording()
-                } else {
-                    startRecording()
-                }
+                showingRecordingView = true
             }) {
                 ZStack {
                     Circle()
-                        .fill(isRecording ? Color.terracotta : Color.honeyGold)
+                        .fill(Color.honeyGold)
                         .frame(width: 88, height: 88)
                         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                     
-                    Image(systemName: isRecording ? "stop.fill" : "mic.fill")
+                    Image(systemName: "mic.fill")
                         .font(.system(size: 32, weight: .medium))
                         .foregroundColor(.white)
                 }
@@ -202,17 +168,10 @@ struct HomeView: View {
             .scaleEffect(viewModel.isRecordingButtonPulsing ? 1.1 : 1.0)
             .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: viewModel.isRecordingButtonPulsing)
             
-            if isRecording {
-                Text(formatTime(recordingTime))
-                    .font(.system(size: 16, weight: .medium, design: .monospaced))
-                    .foregroundColor(.espresso)
-                    .multilineTextAlignment(.center)
-            } else {
-                Text("Запишите итог дня")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.espresso)
-                    .multilineTextAlignment(.center)
-            }
+            Text("Запишите итог дня")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.espresso)
+                .multilineTextAlignment(.center)
         }
     }
     
@@ -228,17 +187,13 @@ struct HomeView: View {
             }
             
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 12) {
-                                        ForEach(VoiceTemplate.allCases.prefix(3), id: \.self) { template in
-                            QuickActionCard(template: template) {
-                                // TODO: Open recording with template
-                                print("🚀 Быстрое действие: \(template.displayName)")
-                                // В будущем здесь будет открытие экрана записи с шаблоном
-                                // Согласно плану: "Быстрые действия → экран «Запись» с предустановленным шаблоном"
-                                
-                                // Пока что просто показываем сообщение о выбранном шаблоне
-                                // TODO: Добавить переход на экран записи с выбранным шаблоном
-                            }
-                        }
+                ForEach(VoiceTemplate.allCases.prefix(3), id: \.self) { template in
+                    QuickActionCard(template: template) {
+                        // Открываем экран записи с выбранным шаблоном
+                        showingRecordingView = true
+                        // TODO: Передать выбранный шаблон в RecordingView
+                    }
+                }
             }
         }
     }

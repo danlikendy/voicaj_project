@@ -81,8 +81,8 @@ enum VoiceTemplate: String, CaseIterable, Codable {
     case tomorrowPlan = "tomorrowPlan"     // План на завтра
     case weeklyPlan = "weeklyPlan"         // План недели
     case quickNote = "quickNote"           // Быстрая заметка
-    case retro = "retro"                   // Ретроспектива
-    case custom = "custom"                 // Пользовательский
+    case meetingNotes = "meetingNotes"     // Заметки встречи
+    case projectUpdate = "projectUpdate"   // Обновление проекта
     
     var displayName: String {
         switch self {
@@ -90,8 +90,8 @@ enum VoiceTemplate: String, CaseIterable, Codable {
         case .tomorrowPlan: return "План на завтра"
         case .weeklyPlan: return "План недели"
         case .quickNote: return "Быстрая заметка"
-        case .retro: return "Ретроспектива"
-        case .custom: return "Пользовательский"
+        case .meetingNotes: return "Заметки встречи"
+        case .projectUpdate: return "Обновление проекта"
         }
     }
     
@@ -101,8 +101,8 @@ enum VoiceTemplate: String, CaseIterable, Codable {
         case .tomorrowPlan: return "Планы и задачи на завтра"
         case .weeklyPlan: return "Цели и планы на неделю"
         case .quickNote: return "Быстрая запись мысли или идеи"
-        case .retro: return "Анализ прошедшего периода"
-        case .custom: return "Свободная форма записи"
+        case .meetingNotes: return "Заметки с встречи или совещания"
+        case .projectUpdate: return "Прогресс и обновления проекта"
         }
     }
     
@@ -112,8 +112,8 @@ enum VoiceTemplate: String, CaseIterable, Codable {
         case .tomorrowPlan: return "calendar.badge.plus"
         case .weeklyPlan: return "calendar.badge.clock"
         case .quickNote: return "note.text"
-        case .retro: return "chart.line.uptrend.xyaxis"
-        case .custom: return "pencil"
+        case .meetingNotes: return "person.2.fill"
+        case .projectUpdate: return "folder.fill"
         }
     }
 }

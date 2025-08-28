@@ -1,446 +1,385 @@
 import SwiftUI
+import AVFoundation
+import Speech
 
 struct RecordingView: View {
+    @StateObject private var viewModel = RecordingViewModel()
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var audioService = AudioRecordingService()
-    @StateObject private var aiService = AIAnalysisService()
-    
-    @State private var transcript = ""
-    @State private var showingResults = false
-    @State private var aiResult: AIAnalysisResult?
-    @State private var selectedTemplate: VoiceTemplate?
-    @State private var showingTemplatePicker = false
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Header
-                headerView
+            ZStack {
+                Color.porcelain
+                    .ignoresSafeArea()
                 
-                // Main Content
-                if showingResults {
-                    resultsView
-                } else {
-                    recordingView
+                VStack(spacing: 0) {
+                    // Header
+                    recordingHeader
+                    
+                    // Main recording area
+                    if viewModel.isRecording {
+                        recordingArea
+                    } else if viewModel.isProcessing {
+                        processingArea
+                    } else if viewModel.hasResults {
+                        resultsArea
+                    } else {
+                        initialArea
+                    }
+                    
+                    Spacer()
                 }
             }
-            .background(Color.porcelain)
             .navigationBarHidden(true)
         }
         .onAppear {
-            // Разрешения будут запрошены при нажатии кнопки записи
+            viewModel.requestPermissions()
         }
-        .alert("Ошибка", isPresented: Binding(
-            get: { audioService.error != nil },
-            set: { _ in audioService.error = nil }
-        )) {
-            Button("OK") {
-                audioService.error = nil
-            }
+        .alert("Ошибка записи", isPresented: $viewModel.showError) {
+            Button("OK") { }
         } message: {
-            Text(audioService.error ?? "")
+            Text(viewModel.errorMessage)
         }
     }
     
-    // MARK: - Header View
-    
-    private var headerView: some View {
+    // MARK: - Header
+    private var recordingHeader: some View {
         HStack {
             Button("Отмена") {
-                if audioService.isRecording {
-                    audioService.cancelRecording()
-                }
                 dismiss()
             }
             .foregroundColor(.espresso)
-            .font(.system(size: 16, weight: .medium))
+            .font(.system(size: 17, weight: .medium))
             
             Spacer()
             
-            if let template = selectedTemplate {
+            if let template = viewModel.selectedTemplate {
                 Text(template.displayName)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.tobacco)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.espresso)
             }
             
             Spacer()
             
-            Button("Шаблон") {
-                showingTemplatePicker = true
-            }
-            .foregroundColor(.cornflowerBlue)
-            .font(.system(size: 16, weight: .medium))
+            // Placeholder for balance
+            Color.clear
+                .frame(width: 60)
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .background(Color.porcelain)
-    }
-    
-    // MARK: - Recording View
-    
-    private var recordingView: some View {
-        VStack(spacing: 32) {
-            Spacer()
-            
-            // Audio Waveform
-            AudioWaveformView(
-                audioLevel: audioService.audioLevel,
-                isRecording: audioService.isRecording,
-                isPaused: audioService.isPaused
-            )
-            .frame(height: 80)
-            
-            // Timer
-            Text(formatDuration(audioService.recordingDuration))
-                .font(.system(size: 48, weight: .light, design: .monospaced))
-                .foregroundColor(.espresso)
-            
-            // Live Transcript
-            if !transcript.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Транскрипция")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.tobacco)
-                    
-                    Text(transcript)
-                        .font(.system(size: 16))
-                        .foregroundColor(.espresso)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(16)
-                        .background(Color.linen)
-                        .cornerRadius(12)
-                }
-                .padding(.horizontal, 20)
-            }
-            
-            Spacer()
-            
-            // Recording Controls
-            recordingControlsView
-            
-            // Tips
-            if audioService.isRecording {
-                recordingTipsView
-            }
-            
-            Spacer()
-        }
-        .padding(.horizontal, 20)
-    }
-    
-    // MARK: - Recording Controls
-    
-    private var recordingControlsView: some View {
-        HStack(spacing: 40) {
-            // Pause/Resume Button
-            Button(action: {
-                if audioService.isPaused {
-                    audioService.resumeRecording()
-                } else {
-                    audioService.pauseRecording()
-                }
-            }) {
-                Image(systemName: audioService.isPaused ? "play.circle.fill" : "pause.circle.fill")
-                    .font(.system(size: 32))
-                    .foregroundColor(.honeyGold)
-            }
-            .disabled(!audioService.isRecording)
-            
-            // Main Record/Stop Button
-            Button(action: {
-                if audioService.isRecording {
-                    stopRecording()
-                } else {
-                    Task {
-                        await startRecording()
-                    }
-                }
-            }) {
-                ZStack {
-                    Circle()
-                        .fill(audioService.isRecording ? Color.terracotta : Color.honeyGold)
-                        .frame(width: 80, height: 80)
-                        .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
-                    
-                    Image(systemName: audioService.isRecording ? "stop.fill" : "mic.fill")
-                        .font(.system(size: 32, weight: .medium))
-                        .foregroundColor(.white)
-                }
-            }
-            
-            // Cancel Button
-            Button(action: {
-                audioService.cancelRecording()
-                transcript = ""
-            }) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 32))
-                    .foregroundColor(.tobacco)
-            }
-            .disabled(!audioService.isRecording)
-        }
-        .padding(.bottom, 32)
-    }
-    
-    // MARK: - Recording Tips
-    
-    private var recordingTipsView: some View {
-        VStack(spacing: 8) {
-            Text("💡 Советы по диктовке")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.tobacco)
-            
-            Text("Говорите короткими предложениями")
-                .font(.system(size: 12))
-                .foregroundColor(.tobacco)
-            
-            Text("Используйте «завтра», «послезавтра» для сроков")
-                .font(.system(size: 12))
-                .foregroundColor(.tobacco)
-        }
-        .padding(.horizontal, 20)
+        .padding(.top, 60)
         .padding(.bottom, 20)
     }
     
-    // MARK: - Results View
+    // MARK: - Initial Area
+    private var initialArea: some View {
+        VStack(spacing: 32) {
+            Spacer()
+            
+            // Main recording button
+            Button(action: {
+                viewModel.startRecording()
+            }) {
+                ZStack {
+                    Circle()
+                        .fill(Color.honeyGold)
+                        .frame(width: 120, height: 120)
+                        .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
+                    
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 48, weight: .medium))
+                        .foregroundColor(.white)
+                }
+            }
+            .scaleEffect(viewModel.buttonScale)
+            .animation(.easeInOut(duration: 2).repeatForever(autoreverses: true), value: viewModel.buttonScale)
+            
+            Text("Нажмите, чтобы начать запись")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundColor(.espresso)
+                .multilineTextAlignment(.center)
+            
+            // Voice templates
+            VStack(spacing: 16) {
+                Text("Быстрые шаблоны")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.tobacco)
+                
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
+                    ForEach(VoiceTemplate.allCases, id: \.self) { template in
+                        Button(action: {
+                            viewModel.selectTemplate(template)
+                        }) {
+                            VStack(spacing: 8) {
+                                Image(systemName: template.icon)
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.honeyGold)
+                                
+                                Text(template.displayName)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.espresso)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.bone)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .stroke(viewModel.selectedTemplate == template ? Color.honeyGold : Color.clear, lineWidth: 2)
+                                    )
+                            )
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            
+            Spacer()
+        }
+    }
     
-    private var resultsView: some View {
+    // MARK: - Recording Area
+    private var recordingArea: some View {
+        VStack(spacing: 40) {
+            Spacer()
+            
+            // Audio wave animation
+            HStack(spacing: 4) {
+                ForEach(0..<20, id: \.self) { index in
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color.honeyGold)
+                        .frame(width: 4, height: viewModel.waveHeights[index])
+                        .animation(.easeInOut(duration: 0.3), value: viewModel.waveHeights[index])
+                }
+            }
+            .frame(height: 60)
+            
+            // Timer
+            Text(viewModel.recordingTime)
+                .font(.system(size: 48, weight: .light))
+                .foregroundColor(.espresso)
+                .monospacedDigit()
+            
+            // Live transcription
+            if !viewModel.liveTranscription.isEmpty {
+                VStack(spacing: 12) {
+                    Text("Что я слышу:")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(.tobacco)
+                    
+                    Text(viewModel.liveTranscription)
+                        .font(.system(size: 16))
+                        .foregroundColor(.espresso)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.bone)
+                        )
+                }
+            }
+            
+            // Recording controls
+            HStack(spacing: 40) {
+                Button(action: {
+                    viewModel.pauseRecording()
+                }) {
+                    Image(systemName: viewModel.isPaused ? "play.circle.fill" : "pause.circle.fill")
+                        .font(.system(size: 48))
+                        .foregroundColor(.cornflowerBlue)
+                }
+                
+                Button(action: {
+                    viewModel.stopRecording()
+                }) {
+                    Image(systemName: "stop.circle.fill")
+                        .font(.system(size: 64))
+                        .foregroundColor(.terracotta)
+                }
+                
+                Button(action: {
+                    viewModel.cancelRecording()
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 48))
+                        .foregroundColor(.warmGrey)
+                }
+            }
+            
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+    }
+    
+    // MARK: - Processing Area
+    private var processingArea: some View {
+        VStack(spacing: 32) {
+            Spacer()
+            
+            ProgressView()
+                .scaleEffect(1.5)
+                .progressViewStyle(CircularProgressViewStyle(tint: .honeyGold))
+            
+            Text("Обрабатываю запись...")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundColor(.espresso)
+            
+            Text("AI анализирует ваш голос и создает задачи")
+                .font(.system(size: 16))
+                .foregroundColor(.tobacco)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+            
+            Spacer()
+        }
+    }
+    
+    // MARK: - Results Area
+    private var resultsArea: some View {
         ScrollView {
             VStack(spacing: 24) {
                 // Header
-                VStack(spacing: 8) {
+                VStack(spacing: 12) {
                     Text("Что я услышал")
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.espresso)
                     
-                    if let result = aiResult {
-                        HStack(spacing: 8) {
-                            Text(result.mood.emoji)
-                                .font(.system(size: 20))
-                            
-                            Text("Настроение: \(result.mood.displayName)")
-                                .font(.system(size: 16))
-                                .foregroundColor(.tobacco)
+                    Text("AI проанализировал вашу запись и создал следующие задачи:")
+                        .font(.system(size: 16))
+                        .foregroundColor(.tobacco)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.horizontal, 20)
+                
+                // Tasks by blocks
+                ForEach(TaskStatus.allCases, id: \.self) { status in
+                    if let tasks = viewModel.tasksByStatus[status], !tasks.isEmpty {
+                        TaskBlockView(status: status, tasks: tasks) { task in
+                            viewModel.editTask(task)
                         }
                     }
                 }
-                .padding(.top, 20)
                 
-                // AI Analysis Progress
-                if aiService.isAnalyzing {
-                    VStack(spacing: 16) {
-                        ProgressView(value: aiService.analysisProgress)
-                            .progressViewStyle(LinearProgressViewStyle(tint: .cornflowerBlue))
-                            .scaleEffect(x: 1, y: 2, anchor: .center)
-                        
-                        Text("Анализирую голос...")
-                            .font(.system(size: 16))
-                            .foregroundColor(.tobacco)
+                // Action buttons
+                VStack(spacing: 16) {
+                    Button("Сохранить все") {
+                        viewModel.saveAllTasks()
+                        dismiss()
                     }
-                    .padding(.horizontal, 40)
-                }
-                
-                // Results
-                if let result = aiResult {
-                    // Tasks by Status
-                    LazyVStack(spacing: 16) {
-                        ForEach(TaskStatus.allCases, id: \.self) { status in
-                            let tasksForStatus = result.tasks.filter { $0.status == status }
-                            if !tasksForStatus.isEmpty {
-                                TaskResultsSection(
-                                    status: status,
-                                    tasks: tasksForStatus
-                                )
-                            }
-                        }
-                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.honeyGold)
+                    )
+                    .foregroundColor(.white)
+                    .font(.system(size: 17, weight: .semibold))
                     
-                    // Action Buttons
-                    actionButtonsView
+                    Button("Редактировать всё") {
+                        viewModel.editAllTasks()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.honeyGold, lineWidth: 2)
+                    )
+                    .foregroundColor(.honeyGold)
+                    .font(.system(size: 17, weight: .semibold))
+                    
+                    Button("Сделать шаблоном") {
+                        viewModel.saveAsTemplate()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.cornflowerBlue, lineWidth: 2)
+                    )
+                    .foregroundColor(.cornflowerBlue)
+                    .font(.system(size: 17, weight: .semibold))
                 }
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 32)
-        }
-    }
-    
-    // MARK: - Action Buttons
-    
-    private var actionButtonsView: some View {
-        VStack(spacing: 12) {
-            Button("Сохранить") {
-                saveRecording()
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(Color.cornflowerBlue)
-            .foregroundColor(.white)
-            .cornerRadius(12)
-            .font(.system(size: 16, weight: .semibold))
-            
-            Button("Редактировать всё") {
-                // TODO: Implement edit mode
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(Color.linen)
-            .foregroundColor(.espresso)
-            .cornerRadius(12)
-            .font(.system(size: 16, weight: .medium))
-            
-            Button("Сделать шаблоном") {
-                // TODO: Implement template creation
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(Color.linen)
-            .foregroundColor(.espresso)
-            .cornerRadius(12)
-            .font(.system(size: 16, weight: .medium))
-        }
-        .padding(.top, 20)
-    }
-    
-    // MARK: - Private Methods
-    
-    private func requestPermissions() {
-        // Запрос разрешений на микрофон и распознавание речи
-        // уже происходит в AudioRecordingService
-    }
-    
-    private func startRecording() async {
-        transcript = ""
-        await audioService.startRecording()
-        
-        // Начинаем распознавание речи в реальном времени
-        if audioService.isRecording {
-            await startSpeechRecognition()
-        }
-    }
-    
-    private func startSpeechRecognition() async {
-        // В реальном приложении здесь будет интеграция с Speech Framework
-        // Пока что используем демонстрационную транскрипцию
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            if audioService.isRecording {
-                transcript = "Сегодня сделал уборку в доме, купил продукты. Завтра нужно позвонить маме и записаться к врачу. Важно не забыть оплатить счета."
+                .padding(.horizontal, 20)
+                .padding(.bottom, 40)
             }
         }
-    }
-    
-    private func stopRecording() {
-        guard audioService.stopRecording() != nil else { return }
-        
-        // Анализируем запись с помощью AI
-        Task {
-            let result = await aiService.analyzeVoiceRecording(
-                transcript: transcript,
-                template: selectedTemplate
-            )
-            
-            await MainActor.run {
-                aiResult = result
-                showingResults = true
-            }
-        }
-    }
-    
-    private func saveRecording() {
-        // Сохраняем задачи в TaskManager
-        if let result = aiResult {
-            // TODO: Передать задачи в HomeViewModel через TaskManager
-            print("Сохранено \(result.tasks.count) задач")
-            
-            // Здесь нужно будет интегрировать с HomeViewModel
-            // viewModel.taskManager.addTasks(result.tasks)
-        }
-        
-        // Закрываем экран
-        dismiss()
-    }
-    
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let minutes = Int(duration) / 60
-        let seconds = Int(duration) % 60
-        return String(format: "%02d:%02d", minutes, seconds)
     }
 }
 
-// MARK: - Task Results Section
-
-struct TaskResultsSection: View {
+// MARK: - Task Block View
+struct TaskBlockView: View {
     let status: TaskStatus
     let tasks: [TaskItem]
+    let onEdit: (TaskItem) -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Circle()
-                    .fill(ColorPalette.statusColor(for: status))
+                    .fill(status.colorValue)
                     .frame(width: 12, height: 12)
                 
-                Text(status.displayName)
+                Text(status.title)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.espresso)
                 
                 Spacer()
                 
-                Text("(\(tasks.count))")
+                Text("\(tasks.count)")
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.tobacco)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.bone)
+                    )
             }
             
-            LazyVStack(spacing: 8) {
-                ForEach(tasks) { task in
-                    TaskResultRow(task: task)
-                }
+            ForEach(tasks, id: \.id) { task in
+                RecordingTaskRowView(task: task, onEdit: onEdit)
             }
         }
-        .padding(16)
-        .background(Color.linen)
-        .cornerRadius(12)
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color.white)
+                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 5)
+        )
+        .padding(.horizontal, 20)
     }
 }
 
-// MARK: - Task Result Row
-
-struct TaskResultRow: View {
+// MARK: - Recording Task Row View
+struct RecordingTaskRowView: View {
     let task: TaskItem
+    let onEdit: (TaskItem) -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        HStack {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(task.title)
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.espresso)
                 
-                Spacer()
-                
-                if task.priority != .medium {
-                    Circle()
-                        .fill(ColorPalette.priorityColor(for: task.priority))
-                        .frame(width: 8, height: 8)
+                if let description = task.description, !description.isEmpty {
+                    Text(description)
+                        .font(.system(size: 14))
+                        .foregroundColor(.tobacco)
+                        .lineLimit(2)
                 }
-            }
-            
-            if let description = task.description, !description.isEmpty {
-                Text(description)
-                    .font(.system(size: 14))
-                    .foregroundColor(.tobacco)
-                    .lineLimit(2)
-            }
-            
-            HStack(spacing: 12) {
-                if task.dueDate != nil {
+                
+                if let dueDate = task.dueDate {
                     HStack(spacing: 4) {
                         Image(systemName: "calendar")
                             .font(.system(size: 12))
-                            .foregroundColor(.tobacco)
+                            .foregroundColor(.cornflowerBlue)
                         
-                        Text(task.formattedDueDate)
+                        Text(dueDate, style: .date)
                             .font(.system(size: 12))
-                            .foregroundColor(.tobacco)
+                            .foregroundColor(.cornflowerBlue)
                     }
                 }
                 
@@ -448,73 +387,37 @@ struct TaskResultRow: View {
                     HStack(spacing: 4) {
                         Image(systemName: "tag.fill")
                             .font(.system(size: 12))
-                            .foregroundColor(.tobacco)
+                            .foregroundColor(.honeyGold)
                         
                         Text(task.tags.joined(separator: ", "))
                             .font(.system(size: 12))
-                            .foregroundColor(.tobacco)
+                            .foregroundColor(.honeyGold)
                     }
                 }
-                
-                Spacer()
+            }
+            
+            Spacer()
+            
+            Button(action: {
+                onEdit(task)
+            }) {
+                Image(systemName: "pencil")
+                    .font(.system(size: 16))
+                    .foregroundColor(.honeyGold)
+                    .padding(8)
+                    .background(
+                        Circle()
+                            .fill(Color.bone)
+                    )
             }
         }
-        .padding(12)
-        .background(Color.porcelain)
-        .cornerRadius(8)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.bone.opacity(0.5))
+        )
     }
 }
-
-// MARK: - Template Picker Sheet
-
-struct TemplatePickerSheet: View {
-    @Binding var isPresented: Bool
-    @Binding var selectedTemplate: VoiceTemplate?
-    
-    var body: some View {
-        NavigationView {
-            List(VoiceTemplate.allCases, id: \.self) { template in
-                Button(action: {
-                    selectedTemplate = template
-                    isPresented = false
-                }) {
-                    HStack {
-                        Image(systemName: template.icon)
-                            .foregroundColor(.cornflowerBlue)
-                            .frame(width: 24)
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(template.displayName)
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.espresso)
-                            
-                            Text(template.description)
-                                .font(.system(size: 14))
-                                .foregroundColor(.tobacco)
-                                .lineLimit(2)
-                        }
-                        
-                        Spacer()
-                    }
-                    .padding(.vertical, 8)
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-            .navigationTitle("Выберите шаблон")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Отмена") {
-                        isPresented = false
-                    }
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
-    }
-}
-
-
 
 #Preview {
     RecordingView()

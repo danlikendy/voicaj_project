@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum TaskStatus: String, CaseIterable, Codable {
     case completed = "completed"      // Свершилось
@@ -25,6 +26,10 @@ enum TaskStatus: String, CaseIterable, Codable {
         }
     }
     
+    var title: String {
+        return displayName
+    }
+    
     var color: String {
         switch self {
         case .completed: return "mossGreen"
@@ -36,6 +41,20 @@ enum TaskStatus: String, CaseIterable, Codable {
         case .delegated: return "olive"
         case .recurring: return "mint"
         case .idea: return "warmGrey"
+        }
+    }
+    
+    var colorValue: Color {
+        switch self {
+        case .completed: return .mossGreen
+        case .important: return .orchidPurple
+        case .planned: return .cornflowerBlue
+        case .stuck: return .terracotta
+        case .paused: return .honeyGold
+        case .waiting: return .tealMist
+        case .delegated: return .olive
+        case .recurring: return .mint
+        case .idea: return .warmGrey
         }
     }
 }

@@ -3,6 +3,27 @@ import AVFoundation
 import Combine
 import Speech
 
+// MARK: - Recording Errors
+enum RecordingError: LocalizedError {
+    case permissionDenied
+    case audioSessionSetupFailed
+    case recordingFailed
+    case fileAccessDenied
+    
+    var errorDescription: String? {
+        switch self {
+        case .permissionDenied:
+            return "Необходимы разрешения на микрофон и распознавание речи"
+        case .audioSessionSetupFailed:
+            return "Ошибка настройки аудио сессии"
+        case .recordingFailed:
+            return "Ошибка записи аудио"
+        case .fileAccessDenied:
+            return "Нет доступа к файловой системе"
+        }
+    }
+}
+
 class AudioRecordingService: NSObject, ObservableObject {
     @Published var isRecording = false
     @Published var isPaused = false
@@ -66,13 +87,10 @@ class AudioRecordingService: NSObject, ObservableObject {
     
     // MARK: - Recording Control
     
-    func startRecording() async {
+    func startRecording() async throws {
         // Проверяем разрешения перед началом записи
         guard await requestPermissions() else {
-            await MainActor.run {
-                self.error = "Необходимы разрешения на микрофон и распознавание речи"
-            }
-            return
+            throw RecordingError.permissionDenied
         }
         
         do {
@@ -90,8 +108,10 @@ class AudioRecordingService: NSObject, ObservableObject {
             
         } catch {
             await MainActor.run {
-                self.error = "Ошибка начала записи: \(error.localizedDescription)"
+                isRecording = false
+                isPaused = false
             }
+            throw error
         }
     }
     
