@@ -1,5 +1,24 @@
 import SwiftUI
 
+// MARK: - HomeFilterChip Component
+struct HomeFilterChip: View {
+    let tag: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text("#\(tag)")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(isSelected ? .white : .espresso)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(isSelected ? Color.honeyGold : Color.linen)
+                .cornerRadius(20)
+        }
+    }
+}
+
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @State private var isRecording = false
@@ -54,6 +73,10 @@ struct HomeView: View {
                     
                     // Task Lists
                     taskListsView
+                    
+                    // Дополнительный отступ внизу для красивого UI
+                    Color.clear
+                        .frame(height: 20)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
@@ -248,7 +271,7 @@ struct HomeView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
                 ForEach(viewModel.availableTags, id: \.self) { tag in
-                    FilterChip(
+                    HomeFilterChip(
                         tag: tag,
                         isSelected: selectedFilter == tag
                     ) {
@@ -260,8 +283,27 @@ struct HomeView: View {
                     }
                 }
             }
-            .padding(.horizontal, 16)
         }
+        .mask(
+            HStack(spacing: 0) {
+                LinearGradient(
+                    gradient: Gradient(colors: [Color.clear, Color.black]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: 20)
+                
+                Rectangle()
+                    .fill(Color.black)
+                
+                LinearGradient(
+                    gradient: Gradient(colors: [Color.black, Color.clear]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: 20)
+            }
+        )
     }
 }
 
@@ -290,24 +332,7 @@ struct QuickActionCard: View {
     }
 }
 
-// MARK: - Filter Chip
-struct FilterChip: View {
-    let tag: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Text("#\(tag)")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(isSelected ? .white : .espresso)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(isSelected ? Color.honeyGold : Color.linen)
-                .cornerRadius(20)
-        }
-    }
-}
+
 
 // MARK: - Data Refresh
 extension HomeView {

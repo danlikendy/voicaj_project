@@ -22,7 +22,7 @@ struct CalendarView: View {
                 
                 Spacer()
             }
-            .background(Color.bone)
+            .background(Color.porcelain)
             .navigationBarHidden(true)
             .gesture(
                 DragGesture()
@@ -77,44 +77,56 @@ struct CalendarView: View {
     // MARK: - Calendar Header
     private var calendarHeader: some View {
         HStack {
+            // Левая часть: кнопка "Сегодня"
             Button("Сегодня") {
                 selectedDate = Date()
             }
-            .foregroundColor(.honeyGold)
+            .foregroundColor(.espresso)
             .font(.system(size: 16, weight: .medium))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color.bone)
+            .cornerRadius(8)
             
             Spacer()
             
-            Text(monthYearString)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(.espresso)
+            // Центр: месяц и год
+            VStack(alignment: .center, spacing: 4) {
+                Text(monthYearString)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(.espresso)
+                    .multilineTextAlignment(.center)
+            }
             
             Spacer()
             
-            Menu {
-                ForEach(CalendarViewMode.allCases, id: \.self) { mode in
-                    Button(mode.rawValue) {
-                        calendarViewMode = mode
+            // Правая часть: меню выбора режима
+            VStack(alignment: .trailing, spacing: 4) {
+                Menu {
+                    ForEach(CalendarViewMode.allCases, id: \.self) { mode in
+                        Button(mode.rawValue) {
+                            calendarViewMode = mode
+                        }
                     }
+                } label: {
+                    HStack {
+                        Text(calendarViewMode.rawValue)
+                            .foregroundColor(.espresso)
+                        Image(systemName: "chevron.down")
+                            .foregroundColor(.tobacco)
+                            .font(.system(size: 12))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.bone)
+                    .cornerRadius(8)
                 }
-            } label: {
-                HStack {
-                    Text(calendarViewMode.rawValue)
-                        .foregroundColor(.espresso)
-                    Image(systemName: "chevron.down")
-                        .foregroundColor(.tobacco)
-                        .font(.system(size: 12))
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color.porcelain)
-                .cornerRadius(8)
             }
         }
         .padding(.horizontal, 20)
-        .padding(.top, 16)
-        .padding(.bottom, 20)
+        .padding(.vertical, 16)
         .background(Color.porcelain)
+        .cornerRadius(20)
     }
     
     // MARK: - Calendar Content
