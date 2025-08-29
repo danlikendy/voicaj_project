@@ -255,9 +255,9 @@ voicaj_project/
 
 ## Команда
 
-- **Разработчик**: [Ваше имя](https://github.com/luvgreyair)
-- **Дизайнер**: [Имя дизайнера](https://github.com/luvgreyair)
-- **Тестировщик**: [Имя тестировщика](https://github.com/luvgreyair)
+- **Разработчик**: [Artem](https://github.com/luvgreyair)
+- **Дизайнер**: [Artem](https://github.com/luvgreyair)
+- **Тестировщик**: [Artem](https://github.com/luvgreyair)
 
 ---
 
