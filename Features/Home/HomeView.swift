@@ -23,7 +23,6 @@ struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @State private var selectedFilter: String?
     @State private var filteredTasks: [TaskItem] = []
-    @State private var showingRecordingView = false
     
     var body: some View {
         NavigationView {
@@ -68,9 +67,6 @@ struct HomeView: View {
                     filteredTasks = viewModel.tasks
                 }
             }
-            .sheet(isPresented: $showingRecordingView) {
-                RecordingView()
-            }
             .overlay(
                 // Верхний градиент для плавного перехода
                 VStack {
@@ -94,7 +90,6 @@ struct HomeView: View {
             .background(Color.bone)
             .navigationBarHidden(true)
         }
-
     }
     
     // MARK: - Header View
@@ -118,27 +113,15 @@ struct HomeView: View {
                 Text(viewModel.greeting)
                     .font(.system(size: 18, weight: .medium))
                     .foregroundColor(.espresso)
-                    .multilineTextAlignment(.center)
-            }
-            
-            Spacer()
-            
-            // Streak Indicator
-            VStack(alignment: .trailing, spacing: 4) {
-                HStack(spacing: 6) {
+                
+                HStack(spacing: 4) {
                     Image(systemName: "bolt.fill")
+                        .font(.system(size: 12))
                         .foregroundColor(.honeyGold)
-                        .font(.system(size: 16))
                     
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("\(viewModel.currentStreak)")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(.espresso)
-                        
-                        Text("дней")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.tobacco)
-                    }
+                    Text("\(viewModel.currentStreak) дней подряд")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.tobacco)
                 }
             }
         }
@@ -152,27 +135,59 @@ struct HomeView: View {
     private var mainRecordingButton: some View {
         VStack(spacing: 16) {
             Button(action: {
-                showingRecordingView = true
+                if viewModel.isRecording {
+                    viewModel.stopRecording()
+                } else {
+                    viewModel.startRecording()
+                }
             }) {
                 ZStack {
                     Circle()
-                        .fill(Color.honeyGold)
+                        .fill(viewModel.isRecording ? Color.terracotta : Color.honeyGold)
                         .frame(width: 88, height: 88)
                         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                     
-                    Image(systemName: "mic.fill")
+                    Image(systemName: viewModel.isRecording ? "stop.fill" : "mic.fill")
                         .font(.system(size: 32, weight: .medium))
                         .foregroundColor(.white)
                 }
             }
-            .scaleEffect(viewModel.isRecordingButtonPulsing ? 1.1 : 1.0)
-            .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: viewModel.isRecordingButtonPulsing)
+            .scaleEffect(viewModel.isRecordingButtonPulsing && !viewModel.isRecording ? 1.1 : 1.0)
+            .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: viewModel.isRecordingButtonPulsing && !viewModel.isRecording)
             
-            Text("Запишите итог дня")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.espresso)
-                .multilineTextAlignment(.center)
+            // Timer display
+            if viewModel.isRecording {
+                Text(formatRecordingTime(viewModel.recordingTime))
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.terracotta)
+                    .monospacedDigit()
+            } else {
+                Text("Запишите итог дня")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.espresso)
+                    .multilineTextAlignment(.center)
+            }
+            
+            // Waveform visualization when recording
+            if viewModel.isRecording {
+                HStack(spacing: 2) {
+                    ForEach(Array(viewModel.waveHeights.enumerated()), id: \.offset) { index, height in
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(Color.terracotta)
+                            .frame(width: 3, height: 20 * height)
+                            .animation(.easeInOut(duration: 0.1), value: height)
+                    }
+                }
+                .frame(height: 20)
+            }
         }
+    }
+    
+    // MARK: - Helper Methods
+    private func formatRecordingTime(_ time: TimeInterval) -> String {
+        let minutes = Int(time) / 60
+        let seconds = Int(time) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
     }
     
     // MARK: - Quick Actions
@@ -189,9 +204,10 @@ struct HomeView: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 12) {
                 ForEach(VoiceTemplate.allCases.prefix(3), id: \.self) { template in
                     QuickActionCard(template: template) {
-                        // Открываем экран записи с выбранным шаблоном
-                        showingRecordingView = true
-                        // TODO: Передать выбранный шаблон в RecordingView
+                        // Запускаем запись с выбранным шаблоном
+                        if !viewModel.isRecording {
+                            viewModel.startRecording()
+                        }
                     }
                 }
             }

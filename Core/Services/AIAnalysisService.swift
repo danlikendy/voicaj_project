@@ -109,20 +109,6 @@ class AIAnalysisService: ObservableObject {
                     status = .planned
                     priority = .medium
                 }
-            case .meetingNotes:
-                status = .planned
-                priority = lowercased.contains("важно") || lowercased.contains("срочно") ? .high : .medium
-            case .projectUpdate:
-                if lowercased.contains("завершил") || lowercased.contains("сделал") {
-                    status = .completed
-                    priority = .medium
-                } else if lowercased.contains("проблема") || lowercased.contains("застрял") {
-                    status = .stuck
-                    priority = .high
-                } else {
-                    status = .planned
-                    priority = .medium
-                }
             }
         } else {
             // Анализируем по контексту без шаблона

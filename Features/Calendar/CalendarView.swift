@@ -219,7 +219,7 @@ struct MonthCalendarView: View {
             
             // Calendar grid
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 0) {
-                ForEach(calendarDays, id: \.self) { date in
+                ForEach(Array(calendarDays.enumerated()), id: \.offset) { index, date in
                     if let date = date {
                         DayCell(
                             date: date,
