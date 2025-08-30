@@ -1,8 +1,11 @@
 import SwiftUI
 
+import SwiftUI
+
 struct TaskDetailView: View {
     let task: TaskItem
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject var taskManager: SimpleTaskManager
     
     @State private var showingEditSheet = false
     @State private var showingDeleteAlert = false
@@ -195,13 +198,13 @@ struct TaskDetailView: View {
             }
         }
         .sheet(isPresented: $showingEditSheet) {
-            TaskEditView(task: task)
+            TaskEditView(task: task, taskManager: taskManager)
                 .presentationDetents([.large, .medium])
         }
         .alert("Удалить задачу?", isPresented: $showingDeleteAlert) {
             Button("Отмена", role: .cancel) { }
             Button("Удалить", role: .destructive) {
-                // TODO: Delete task
+                taskManager.deleteTask(task)
                 print("🗑️ Удаление задачи: \(task.title)")
                 dismiss()
             }
@@ -220,11 +223,14 @@ struct TaskDetailView: View {
 }
 
 #Preview {
-    TaskDetailView(task: TaskItem(
-        title: "Sample Task",
-        description: "This is a sample task description",
-        status: .planned,
-        priority: .high,
-        tags: ["sample", "test"]
-    ))
+    TaskDetailView(
+        task: TaskItem(
+            title: "Sample Task",
+            description: "This is a sample task description",
+            status: .planned,
+            priority: .high,
+            tags: ["sample", "test"]
+        ),
+        taskManager: SimpleTaskManager()
+    )
 }

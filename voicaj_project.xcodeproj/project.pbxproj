@@ -41,10 +41,14 @@
 		EBA1D1102E5E2C3500BE87FA /* Exceptions for "Core" folder in "voicaj_project" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Config/AIConfig.swift,
 				Models/Task.swift,
 				Models/VoiceRecord.swift,
 				Services/AIAnalysisService.swift,
+				Services/AIService.swift,
 				Services/AudioRecordingService.swift,
+				Services/MockAIService.swift,
+				Services/TaskManager.swift,
 				Utils/AudioWaveformView.swift,
 				Utils/ColorPalette.swift,
 			);

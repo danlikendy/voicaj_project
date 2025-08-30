@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-enum TaskStatus: String, CaseIterable, Codable {
+enum TaskStatus: String, CaseIterable, Codable, Equatable {
     case completed = "completed"      // Свершилось
     case important = "important"      // Важное
     case planned = "planned"          // В планах
@@ -59,7 +59,7 @@ enum TaskStatus: String, CaseIterable, Codable {
     }
 }
 
-enum TaskPriority: String, CaseIterable, Codable {
+enum TaskPriority: String, CaseIterable, Codable, Equatable {
     case low = "low"
     case medium = "medium"
     case high = "high"
@@ -81,7 +81,7 @@ enum TaskPriority: String, CaseIterable, Codable {
     }
 }
 
-struct TaskItem: Identifiable, Codable {
+struct TaskItem: Identifiable, Codable, Equatable {
     let id: UUID
     var title: String
     var description: String?
@@ -94,7 +94,7 @@ struct TaskItem: Identifiable, Codable {
     var transcript: String?
     var createdAt: Date
     var updatedAt: Date
-    var completedAt: Date?
+    var completedDate: Date?
     var parentTaskId: UUID?
     var subtasks: [UUID]
     
@@ -111,7 +111,7 @@ struct TaskItem: Identifiable, Codable {
         transcript: String? = nil,
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
-        completedAt: Date? = nil,
+        completedDate: Date? = nil,
         parentTaskId: UUID? = nil,
         subtasks: [UUID] = []
     ) {
@@ -127,8 +127,8 @@ struct TaskItem: Identifiable, Codable {
         self.transcript = transcript
         self.createdAt = createdAt
         self.updatedAt = updatedAt
-        self.completedAt = completedAt
-        self.parentTaskId = parentTaskId
+        self.completedDate = completedDate
+        self.parentTaskId = UUID()
         self.subtasks = subtasks
     }
 }
@@ -136,7 +136,7 @@ struct TaskItem: Identifiable, Codable {
 // MARK: - TaskItem Extensions
 extension TaskItem {
     var isCompleted: Bool {
-        status == .completed
+        return completedDate != nil
     }
     
     var isOverdue: Bool {

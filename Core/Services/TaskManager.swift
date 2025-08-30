@@ -39,10 +39,10 @@ class TaskManager: ObservableObject {
             var updatedTask = task
             if updatedTask.status == .completed {
                 updatedTask.status = .planned
-                updatedTask.completedAt = nil
+                updatedTask.completedDate = nil
             } else {
                 updatedTask.status = .completed
-                updatedTask.completedAt = Date()
+                updatedTask.completedDate = Date()
             }
             updatedTask.updatedAt = Date()
             tasks[index] = updatedTask

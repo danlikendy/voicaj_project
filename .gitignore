@@ -114,4 +114,10 @@ Desktop.ini
 .env.test.local
 .env.production.local
 
+# API Keys and Secrets
+*APIKey*
+*Secret*
+*Token*
+*Password*
+
 DEVELOPMENT_PLAN.md

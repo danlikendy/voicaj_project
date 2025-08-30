@@ -1,9 +1,15 @@
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject private var homeViewModel = HomeViewModel()
+    
     var body: some View {
         TabView {
             HomeView()
+                .environmentObject(homeViewModel)
+                .onAppear {
+                    print("🏠 HomeView загружен")
+                }
                 .tabItem {
                     Image(systemName: "house.fill")
                     Text("Дом")
@@ -27,7 +33,7 @@ struct ContentView: View {
                     Text("Аналитика")
                 }
             
-            ChatView()
+            ChatView(homeViewModel: homeViewModel)
                 .tabItem {
                     Image(systemName: "message.fill")
                     Text("Чат")

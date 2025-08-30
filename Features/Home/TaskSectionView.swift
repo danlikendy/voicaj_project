@@ -4,6 +4,7 @@ struct TaskSectionView: View {
     let status: TaskStatus
     let tasks: [TaskItem]
     let isCollapsed: Bool
+    @ObservedObject var viewModel: HomeViewModel
     let onToggle: () -> Void
     
     var body: some View {
@@ -44,7 +45,11 @@ struct TaskSectionView: View {
             if !isCollapsed && !tasks.isEmpty {
                 VStack(spacing: 0) {
                     ForEach(tasks) { task in
-                        TaskRowView(task: task)
+                        TaskRowView(task: task, viewModel: viewModel)
+                            .transition(.asymmetric(
+                                insertion: .scale.combined(with: .opacity),
+                                removal: .scale.combined(with: .opacity)
+                            ))
                         
                         if task.id != tasks.last?.id {
                             Divider()
@@ -53,18 +58,24 @@ struct TaskSectionView: View {
                         }
                     }
                 }
+                .animation(.easeInOut(duration: 0.3), value: tasks)
                 .background(Color.porcelain)
                 .cornerRadius(16, corners: [.bottomLeft, .bottomRight])
             } else if !isCollapsed && tasks.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "plus.circle")
-                        .font(.system(size: 24))
-                        .foregroundColor(.honeyGold)
-                    
-                    Text("Нет задач в этом разделе")
-                        .font(.system(size: 14))
-                        .foregroundColor(.tobacco)
-                        .multilineTextAlignment(.center)
+                Button(action: {
+                    // Открываем создание новой задачи
+                    viewModel.showingTaskCreation = true
+                }) {
+                    VStack(spacing: 12) {
+                        Image(systemName: "plus.circle")
+                            .font(.system(size: 24))
+                            .foregroundColor(.honeyGold)
+                        
+                        Text("Создать задачу")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.honeyGold)
+                            .multilineTextAlignment(.center)
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 24)
@@ -78,18 +89,32 @@ struct TaskSectionView: View {
 // MARK: - Task Row View
 struct TaskRowView: View {
     let task: TaskItem
+    let viewModel: HomeViewModel
     @State private var showingTaskDetail = false
+    @State private var isAnimating = false
     
     var body: some View {
         HStack(spacing: 16) {
             // Checkbox - отдельная кнопка
             Button(action: {
-                // TODO: Complete task
+                isAnimating = true
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                    viewModel.taskManager.toggleTaskCompletion(task)
+                }
+                
+                // Сброс анимации
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    isAnimating = false
+                }
+                
                 print("✅ Отметить задачу выполненной: \(task.title)")
             }) {
                 Image(systemName: task.status == .completed ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 24))
-                    .foregroundColor(task.status == .completed ? ColorPalette.statusColor(for: .completed) : .tobacco)
+                    .foregroundColor(task.status == .completed ? .green : .tobacco)
+                    .scaleEffect(isAnimating ? 1.2 : (task.status == .completed ? 1.1 : 1.0))
+                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: task.status)
+                    .animation(.spring(response: 0.2, dampingFraction: 0.5), value: isAnimating)
             }
             .buttonStyle(PlainButtonStyle())
             
@@ -179,7 +204,7 @@ struct TaskRowView: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
         .sheet(isPresented: $showingTaskDetail) {
-            TaskDetailView(task: task)
+            TaskDetailView(task: task, taskManager: viewModel.taskManager)
         }
     }
 }
@@ -215,13 +240,15 @@ struct RoundedCorner: Shape {
                 TaskItem(title: "Sample Task 1", description: "Description 1"),
                 TaskItem(title: "Sample Task 2", description: "Description 2")
             ],
-            isCollapsed: false
+            isCollapsed: false,
+            viewModel: HomeViewModel()
         ) {}
         
         TaskSectionView(
             status: .completed,
             tasks: [],
-            isCollapsed: false
+            isCollapsed: false,
+            viewModel: HomeViewModel()
         ) {}
     }
     .padding()

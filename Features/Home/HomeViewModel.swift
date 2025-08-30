@@ -4,16 +4,90 @@ import SwiftUI
 import AVFoundation
 import Speech
 
-class HomeViewModel: ObservableObject {
+// MARK: - Simple TaskManager
+@MainActor
+class SimpleTaskManager: ObservableObject {
     @Published var tasks: [TaskItem] = []
+    
+    func addTask(_ task: TaskItem) {
+        tasks.append(task)
+        saveTasks()
+    }
+    
+    func updateTask(_ task: TaskItem) {
+        if let index = tasks.firstIndex(where: { $0.id == task.id }) {
+            tasks[index] = task
+            saveTasks()
+        }
+    }
+    
+    func deleteTask(_ task: TaskItem) {
+        tasks.removeAll { $0.id == task.id }
+        saveTasks()
+    }
+    
+    func toggleTaskCompletion(_ task: TaskItem) {
+        var updatedTask = task
+        if updatedTask.completedDate == nil {
+            // Отмечаем как выполненную
+            updatedTask.completedDate = Date()
+            updatedTask.status = .completed
+        } else {
+            // Отмечаем как не выполненную
+            updatedTask.completedDate = nil
+            updatedTask.status = .planned
+        }
+        updateTask(updatedTask)
+    }
+    
+    private func saveTasks() {
+        // Простое сохранение в UserDefaults
+        if let data = try? JSONEncoder().encode(tasks) {
+            UserDefaults.standard.set(data, forKey: "savedTasks")
+        }
+    }
+    
+    private func loadTasks() {
+        if let data = UserDefaults.standard.data(forKey: "savedTasks"),
+           let loadedTasks = try? JSONDecoder().decode([TaskItem].self, from: data) {
+            tasks = loadedTasks
+        }
+    }
+    
+    init() {
+        loadTasks()
+    }
+}
+
+@MainActor
+class HomeViewModel: ObservableObject {
     @Published var collapsedSections: Set<TaskStatus> = []
-    @Published var isRecordingButtonPulsing = true
+    @Published var isRecordingButtonPulsing = false
+    
+    // TaskManager для управления задачами
+    @Published var taskManager = SimpleTaskManager()
+    
+    // Computed property для задач
+    var tasks: [TaskItem] {
+        return taskManager.tasks
+    }
     
     // MARK: - Recording States
     @Published var isRecording = false
     @Published var recordingTime: TimeInterval = 0
     @Published var recordingStartTime: Date?
     @Published var waveHeights: [CGFloat] = Array(repeating: 0.3, count: 20)
+    
+    // MARK: - Transcription and AI Analysis
+    @Published var transcript = ""
+    @Published var isTranscribing = false
+    @Published var aiAnalysisResult: String = ""
+    @Published var isAnalyzing = false
+    
+    // MARK: - UI State
+    @Published var showingTaskCreation = false
+    
+    // MARK: - Voice Recording (базовая версия)
     
     private var cancellables = Set<AnyCancellable>()
     private var recordingTimer: Timer?
@@ -23,10 +97,19 @@ class HomeViewModel: ObservableObject {
     private var recognitionTask: SFSpeechRecognitionTask?
     private var audioEngine: AVAudioEngine?
     
+    // MARK: - AI Service
+    private var aiService: any AIServiceProtocol
+    
     init() {
+        // Временно используем MockAIService для тестирования
+        self.aiService = MockAIService()
+        print("🤖 Используется Mock AI сервис для тестирования")
+        
+        print("🚀 HomeViewModel инициализируется")
         setupData()
         startPulsingAnimation()
         setupSpeechRecognition()
+        print("✅ HomeViewModel инициализирован")
     }
     
     // MARK: - Speech Recognition Setup
@@ -40,6 +123,14 @@ class HomeViewModel: ObservableObject {
         guard !isRecording else { return }
         
         print("🎤 Запуск записи...")
+        
+        // Сразу устанавливаем состояние записи для UI
+        DispatchQueue.main.async {
+            self.isRecording = true
+            self.recordingStartTime = Date()
+            self.recordingTime = 0
+            print("🎯 UI обновлен: isRecording = \(self.isRecording)")
+        }
         
         // Сначала запрашиваем разрешение на микрофон
         requestMicrophonePermission { [weak self] granted in
@@ -61,25 +152,25 @@ class HomeViewModel: ObservableObject {
                             self.setupAudioSession { success in
                                 if success {
                                     print("✅ Аудиосессия настроена успешно")
-                                    self.isRecording = true
-                                    self.recordingStartTime = Date()
-                                    self.recordingTime = 0
                                     self.startRecordingTimer()
                                     self.setupWaveAnimation()
                                     self.startAudioRecording()
                                     self.startSpeechRecognition()
                                 } else {
                                     print("❌ Не удалось настроить аудиосессию")
+                                    self.isRecording = false
                                 }
                             }
                         } else {
                             print("❌ Разрешение на распознавание речи не получено")
+                            self.isRecording = false
                         }
                     }
                 }
             } else {
                 DispatchQueue.main.async {
                     print("❌ Разрешение на микрофон не получено")
+                    self.isRecording = false
                 }
             }
         }
@@ -257,16 +348,24 @@ class HomeViewModel: ObservableObject {
             print("🎯 Распознавание речи запущено")
             
             recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest) { [weak self] result, error in
+                guard let self = self else { return }
+                
                 if let result = result {
                     let transcript = result.bestTranscription.formattedString
                     print("📝 Транскрипция: \(transcript)")
+                    
+                    // Сохраняем транскрипцию в реальном времени
+                    DispatchQueue.main.async {
+                        self.transcript = transcript
+                        print("💾 Транскрипция сохранена: \(self.transcript)")
+                    }
                 }
                 
                 if error != nil || result?.isFinal == true {
-                    self?.audioEngine?.stop()
+                    self.audioEngine?.stop()
                     inputNode.removeTap(onBus: 0)
-                    self?.recognitionRequest = nil
-                    self?.recognitionTask = nil
+                    self.recognitionRequest = nil
+                    self.recognitionTask = nil
                     print("🛑 Распознавание речи остановлено")
                 }
             }
@@ -283,26 +382,261 @@ class HomeViewModel: ObservableObject {
     }
     
     private func createTaskFromRecording() {
-        let newTask = TaskItem(
-            id: UUID(),
-            title: "Запись от \(DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .short))",
-            description: "Голосовая запись длительностью \(Int(recordingTime)) секунд",
-            status: .planned,
-            priority: .medium,
-            dueDate: nil,
-            tags: ["голосовая-запись"],
-            isPrivate: false,
-            audioURL: nil,
-            transcript: nil,
-            createdAt: Date(),
-            updatedAt: Date(),
-            completedAt: nil,
-            parentTaskId: nil,
-            subtasks: []
-        )
+        print("🤖 Начинаем AI анализ голосовой записи...")
         
-        tasks.append(newTask)
-        print("✅ Создана задача на основе записи")
+        // Запускаем AI анализ в асинхронном режиме
+        Task {
+            await performAIAnalysis()
+        }
+    }
+    
+    private func performAIAnalysis() async {
+        print("🤖 Выполняем AI анализ голосовой записи...")
+        
+        do {
+            // Анализируем голосовую запись с помощью AI
+            let result = try await aiService.analyzeVoiceRecording(transcript, audioURL: nil)
+            
+            await MainActor.run {
+                // Создаем задачи на основе AI анализа
+                for extractedTask in result.tasks {
+                    let newTask = TaskItem(
+                        title: extractedTask.title,
+                        description: extractedTask.description ?? "Задача создана AI на основе голосовой записи",
+                        status: .planned,
+                        priority: extractedTask.priority,
+                        dueDate: extractedTask.dueDate,
+                        tags: extractedTask.tags + ["ai-создана", "голосовая-запись"],
+                        isPrivate: false,
+                        audioURL: nil,
+                        transcript: transcript,
+                        createdAt: Date(),
+                        updatedAt: Date(),
+                        completedDate: nil,
+                        parentTaskId: nil,
+                        subtasks: []
+                    )
+                    taskManager.addTask(newTask)
+                    print("✅ Создана AI задача: \(extractedTask.title)")
+                }
+                
+                // Если AI не смог извлечь задачи, создаем общую запись
+                                        if result.tasks.isEmpty {
+                    let generalTask = TaskItem(
+                        title: "Запись от \(DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .short))",
+                        description: transcript.isEmpty ? "Голосовая запись длительностью \(Int(recordingTime)) секунд" : transcript,
+                        status: .planned,
+                        priority: .medium,
+                        dueDate: nil,
+                        tags: ["голосовая-запись", "ai-анализ"],
+                        isPrivate: false,
+                        audioURL: nil,
+                        transcript: transcript.isEmpty ? nil : transcript,
+                        createdAt: Date(),
+                        updatedAt: Date(),
+                        completedDate: nil,
+                        parentTaskId: nil,
+                        subtasks: []
+                    )
+                    taskManager.addTask(generalTask)
+                    print("✅ Создана общая задача на основе записи")
+                }
+                
+                // Генерируем AI анализ для отображения
+                aiAnalysisResult = result.summary
+                
+                // Очищаем транскрипцию для следующей записи
+                transcript = ""
+                                        print("🎯 AI анализ завершен. Создано задач: \(result.tasks.count)")
+            }
+            
+        } catch {
+            print("❌ Ошибка AI анализа: \(error)")
+            
+            // В случае ошибки создаем простую задачу
+            await MainActor.run {
+                let fallbackTask = TaskItem(
+                    title: "Запись от \(DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .short))",
+                    description: transcript.isEmpty ? "Голосовая запись длительностью \(Int(recordingTime)) секунд" : transcript,
+                    status: .planned,
+                    priority: .medium,
+                    dueDate: nil,
+                    tags: ["голосовая-запись", "ошибка-ai"],
+                    isPrivate: false,
+                    audioURL: nil,
+                    transcript: transcript.isEmpty ? nil : transcript,
+                    createdAt: Date(),
+                    updatedAt: Date(),
+                    completedDate: nil,
+                    parentTaskId: nil,
+                    subtasks: []
+                )
+                taskManager.addTask(fallbackTask)
+                transcript = ""
+                aiAnalysisResult = "AI анализ не удался, но запись сохранена"
+            }
+        }
+    }
+    
+    // MARK: - AI Analysis Methods
+    
+    private func generateAIAnalysis(transcript: String, tasksCount: Int) -> String {
+        var analysis = "🎯 **AI анализ голосовой записи**\n\n"
+        
+        if tasksCount > 0 {
+            analysis += "✅ **Извлечено задач:** \(tasksCount)\n"
+            analysis += "📝 **Транскрипция:** \(transcript.prefix(100))...\n\n"
+            
+            if tasksCount == 1 {
+                analysis += "Отлично! AI смог выделить одну задачу из вашей записи."
+            } else if tasksCount <= 3 {
+                analysis += "Хорошо! AI выделил несколько задач для планирования."
+            } else {
+                analysis += "Отлично! AI обработал сложную запись и выделил множество задач."
+            }
+        } else {
+            analysis += "📝 **Транскрипция:** \(transcript.prefix(100))...\n\n"
+            analysis += "AI не смог выделить конкретные задачи, но сохранил вашу запись для дальнейшего анализа."
+        }
+        
+        return analysis
+    }
+    
+    private func extractTasksFromTranscript(_ transcript: String) -> [ExtractedTask] {
+        var tasks: [ExtractedTask] = []
+        
+        // Простой AI анализ для извлечения задач
+        let sentences = transcript.components(separatedBy: [".", "!", "?"])
+        
+        for sentence in sentences {
+            let trimmed = sentence.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.count > 10 && isTaskSentence(trimmed) {
+                let task = ExtractedTask(
+                    title: generateTaskTitle(from: trimmed),
+                    description: trimmed,
+                    priority: determinePriority(from: trimmed),
+                    dueDate: extractDueDate(from: trimmed),
+                    tags: extractTags(trimmed),
+                    confidence: 0.8
+                )
+                tasks.append(task)
+            }
+        }
+        
+        return tasks
+    }
+    
+    private func isTaskSentence(_ sentence: String) -> Bool {
+        let taskKeywords = [
+            "нужно", "должен", "планирую", "хочу", "сделать", "завершить", "подготовить", 
+            "встретиться", "позвонить", "купить", "записаться", "изучить", "прочитать",
+            "написать", "отправить", "проверить", "обновить", "создать", "разработать",
+            "организовать", "планирую", "собираюсь", "надо", "следует", "важно"
+        ]
+        
+        let lowercased = sentence.lowercased()
+        return taskKeywords.contains { lowercased.contains($0) } || 
+               lowercased.contains("завтра") || 
+               lowercased.contains("сегодня") ||
+               lowercased.contains("на этой неделе")
+    }
+    
+    private func generateTaskTitle(from sentence: String) -> String {
+        // Извлекаем ключевые слова для названия задачи
+        let words = sentence.components(separatedBy: " ")
+        let stopWords = [
+            "нужно", "должен", "планирую", "хочу", "сделать", "завершить", "подготовить",
+            "встретиться", "позвонить", "купить", "записаться", "изучить", "прочитать",
+            "написать", "отправить", "проверить", "обновить", "создать", "разработать",
+            "организовать", "планирую", "собираюсь", "надо", "следует", "важно", "это",
+            "было", "будет", "есть", "стал", "стала", "стали", "стало"
+        ]
+        
+        let keyWords = words.filter { word in
+            let cleanWord = word.lowercased().trimmingCharacters(in: .punctuationCharacters)
+            return cleanWord.count > 2 && !stopWords.contains(cleanWord)
+        }
+        
+        let title = keyWords.prefix(5).joined(separator: " ")
+        return title.isEmpty ? "Задача из голосовой записи" : title.capitalized
+    }
+    
+    private func determinePriority(from sentence: String) -> TaskPriority {
+        let highPriorityKeywords = ["срочно", "важно", "критично", "немедленно"]
+        let lowPriorityKeywords = ["потом", "когда-нибудь", "не срочно"]
+        
+        if highPriorityKeywords.contains(where: { sentence.lowercased().contains($0) }) {
+            return .high
+        } else if lowPriorityKeywords.contains(where: { sentence.lowercased().contains($0) }) {
+            return .low
+        }
+        return .medium
+    }
+    
+    private func extractDueDate(from sentence: String) -> Date? {
+        let today = Date()
+        let calendar = Calendar.current
+        
+        if sentence.lowercased().contains("сегодня") {
+            return today
+        } else if sentence.lowercased().contains("завтра") {
+            return calendar.date(byAdding: .day, value: 1, to: today)
+        } else if sentence.lowercased().contains("на этой неделе") {
+            return calendar.date(byAdding: .weekOfYear, value: 1, to: today)
+        }
+        
+        return nil
+    }
+    
+    private func extractTags(_ text: String) -> [String] {
+        var tags: [String] = []
+        let lowercased = text.lowercased()
+        
+        // Извлекаем хештеги
+        let hashtagPattern = "#\\w+"
+        let regex = try? NSRegularExpression(pattern: hashtagPattern)
+        let range = NSRange(text.startIndex..., in: text)
+        let matches = regex?.matches(in: text, range: range) ?? []
+        
+        for match in matches {
+            if let range = Range(match.range, in: text) {
+                let tag = String(text[range])
+                tags.append(tag)
+            }
+        }
+        
+        // Добавляем автоматические теги на основе контекста
+        let contextTags: [(keywords: [String], tag: String)] = [
+            (["встреча", "встретиться", "собрание", "конференция"], "встреча"),
+            (["звонок", "позвонить", "телефон"], "звонок"),
+            (["проект", "разработка", "код", "программирование"], "проект"),
+            (["покупки", "купить", "магазин", "заказ"], "покупки"),
+            (["здоровье", "врач", "больница", "аптека"], "здоровье"),
+            (["спорт", "тренировка", "фитнес", "зал"], "спорт"),
+            (["обучение", "изучить", "курс", "книга"], "обучение"),
+            (["работа", "офис", "клиент", "заказчик"], "работа"),
+            (["быт", "уборка", "стирка", "готовка"], "быт"),
+            (["финансы", "деньги", "счет", "платеж"], "финансы")
+        ]
+        
+        for contextTag in contextTags {
+            if contextTag.keywords.contains(where: { lowercased.contains($0) }) {
+                tags.append(contextTag.tag)
+            }
+        }
+        
+        // Добавляем тег по приоритету
+        if lowercased.contains("срочно") || lowercased.contains("важно") || lowercased.contains("критично") {
+            tags.append("срочно")
+        }
+        
+        return Array(Set(tags)) // Убираем дубликаты
+    }
+    
+    private func generateSummary(_ transcript: String) -> String {
+        let sentences = transcript.components(separatedBy: [".", "!", "?"])
+        let keySentences = sentences.prefix(3).joined(separator: ". ")
+        return keySentences + "."
     }
     
     // MARK: - Computed Properties
@@ -337,8 +671,31 @@ class HomeViewModel: ObservableObject {
     }
     
     var currentStreak: Int {
-        // TODO: Implement streak calculation based on voice records
-        return 7
+        // Простой расчет streak
+        var streak = 0
+        let calendar = Calendar.current
+        let now = Date()
+        
+        for dayOffset in 0... {
+            let date = calendar.date(byAdding: .day, value: -dayOffset, to: now) ?? now
+            let tasksForDay = tasks.filter { task in
+                guard let taskDate = task.dueDate else { return false }
+                return calendar.isDate(taskDate, inSameDayAs: date)
+            }
+            
+            if tasksForDay.isEmpty {
+                break
+            }
+            
+            let completedCount = tasksForDay.filter { $0.completedDate != nil }.count
+            if completedCount > 0 {
+                streak += 1
+            } else {
+                break
+            }
+        }
+        
+        return streak
     }
     
     var recordingButtonText: String {
@@ -371,40 +728,31 @@ class HomeViewModel: ObservableObject {
     }
     
     func completeTask(_ task: TaskItem) {
-        if let index = tasks.firstIndex(where: { $0.id == task.id }) {
-            tasks[index].status = .completed
-            tasks[index].completedAt = Date()
-            tasks[index].updatedAt = Date()
-        }
+        taskManager.toggleTaskCompletion(task)
     }
     
     func snoozeTask(_ task: TaskItem, until date: Date) {
-        if let index = tasks.firstIndex(where: { $0.id == task.id }) {
-            tasks[index].dueDate = date
-            tasks[index].updatedAt = Date()
-        }
+        var updatedTask = task
+        updatedTask.dueDate = date
+        taskManager.updateTask(updatedTask)
     }
     
     func deleteTask(_ task: TaskItem) {
-        tasks.removeAll { $0.id == task.id }
+        taskManager.deleteTask(task)
     }
     
     // MARK: - Private Methods
     
     private func setupData() {
-        // TODO: Load tasks from data service
-        loadSampleData()
+        // Загружаем задачи из TaskManager
+        if taskManager.tasks.isEmpty {
+            loadSampleData()
+        }
     }
     
     private func startPulsingAnimation() {
-        Timer.publish(every: 3.0, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                withAnimation(.easeInOut(duration: 0.5)) {
-                    self?.isRecordingButtonPulsing.toggle()
-                }
-            }
-            .store(in: &cancellables)
+        // Отключаем пульсацию кнопки записи
+        isRecordingButtonPulsing = false
     }
     
     private func loadSampleData() {
@@ -449,6 +797,25 @@ class HomeViewModel: ObservableObject {
             )
         ]
         
-        tasks = sampleTasks
+        for task in sampleTasks {
+            taskManager.addTask(task)
+        }
+    }
+    
+    // MARK: - Task Status Ordering
+    
+    var orderedTaskStatuses: [TaskStatus] {
+        // Правильный порядок блоков задач
+        return [
+            .important,      // Важное - вверху
+            .planned,        // В планах
+            .stuck,          // Застряло
+            .waiting,        // Ожидает ответа
+            .delegated,      // Делегировано
+            .paused,         // На паузе
+            .recurring,      // Повторяющееся
+            .idea,           // Идеи на потом
+            .completed       // Свершилось - внизу
+        ]
     }
 }

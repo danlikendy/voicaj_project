@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TaskEditView: View {
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject var taskManager: SimpleTaskManager
     
     @State private var title = ""
     @State private var description = ""
@@ -15,9 +16,10 @@ struct TaskEditView: View {
     let task: TaskItem?
     let isEditing: Bool
     
-    init(task: TaskItem? = nil) {
+    init(task: TaskItem? = nil, taskManager: SimpleTaskManager) {
         self.task = task
         self.isEditing = task != nil
+        self.taskManager = taskManager
         
         if let task = task {
             _title = State(initialValue: task.title)
@@ -118,49 +120,69 @@ struct TaskEditView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Color.bone)
-            
-            // Кнопка сохранения внизу (вне Form)
-            Button(action: saveTask) {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text("Сохранить")
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(title.isEmpty ? Color.tobacco : Color.honeyGold)
-                .foregroundColor(.white)
-                .cornerRadius(12)
-            }
-            .disabled(title.isEmpty)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 20)
             .navigationTitle(isEditing ? "Редактировать задачу" : "Новая задача")
             .navigationBarTitleDisplayMode(.inline)
-
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Отмена") {
+                        dismiss()
+                    }
+                    .foregroundColor(.terracotta)
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Сохранить") {
+                        saveTask()
+                    }
+                    .foregroundColor(.honeyGold)
+                    .fontWeight(.semibold)
+                    .disabled(title.isEmpty)
+                }
+            }
         }
     }
     
     private func saveTask() {
-        let taskToSave = TaskItem(
-            id: task?.id ?? UUID(),
-            title: title,
-            description: description.isEmpty ? nil : description,
-            status: selectedStatus,
-            priority: selectedPriority,
-            dueDate: hasDueDate ? dueDate : nil,
-            tags: tags,
-            createdAt: task?.createdAt ?? Date(),
-            updatedAt: Date(),
-            completedAt: task?.completedAt
-        )
-        
-        // TODO: Save task to data store
-        print("Сохранена задача: \(taskToSave.title)")
+        if isEditing, let existingTask = task {
+            // Обновляем существующую задачу
+            var updatedTask = existingTask
+            updatedTask.title = title
+            updatedTask.description = description.isEmpty ? nil : description
+            updatedTask.status = selectedStatus
+            updatedTask.priority = selectedPriority
+            updatedTask.dueDate = hasDueDate ? dueDate : nil
+            updatedTask.tags = tags
+            updatedTask.updatedAt = Date()
+            
+            taskManager.updateTask(updatedTask)
+            print("✅ Обновлена задача: \(updatedTask.title)")
+        } else {
+            // Создаем новую задачу
+            let newTask = TaskItem(
+                title: title,
+                description: description.isEmpty ? nil : description,
+                status: selectedStatus,
+                priority: selectedPriority,
+                dueDate: hasDueDate ? dueDate : nil,
+                tags: tags,
+                isPrivate: false,
+                audioURL: nil,
+                transcript: nil,
+                createdAt: Date(),
+                updatedAt: Date(),
+                completedDate: nil,
+                parentTaskId: nil,
+                subtasks: []
+            )
+            
+            taskManager.addTask(newTask)
+            print("✅ Создана задача: \(newTask.title)")
+        }
         
         dismiss()
     }
 }
 
 #Preview {
-    TaskEditView()
+    TaskEditView(taskManager: SimpleTaskManager())
 }

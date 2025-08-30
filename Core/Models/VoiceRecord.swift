@@ -2,35 +2,57 @@ import Foundation
 
 struct VoiceRecord: Identifiable, Codable {
     let id: UUID
-    var audioURL: URL
-    var transcript: String
-    var duration: TimeInterval
-    var mood: Mood?
-    var createdAt: Date
-    var tasks: [UUID] // Ссылки на созданные задачи
-    var isPrivate: Bool
-    var template: VoiceTemplate?
+    let audioURL: URL?
+    let transcript: String
+    let duration: TimeInterval
+    let createdAt: Date
+    var aiAnalysis: AIAnalysis?
     
-    init(
-        id: UUID = UUID(),
-        audioURL: URL,
-        transcript: String = "",
-        duration: TimeInterval = 0,
-        mood: Mood? = nil,
-        createdAt: Date = Date(),
-        tasks: [UUID] = [],
-        isPrivate: Bool = false,
-        template: VoiceTemplate? = nil
-    ) {
-        self.id = id
-        self.audioURL = audioURL
+    init(transcript: String, duration: TimeInterval, audioURL: URL? = nil) {
+        self.id = UUID()
         self.transcript = transcript
         self.duration = duration
-        self.mood = mood
-        self.createdAt = createdAt
-        self.tasks = tasks
-        self.isPrivate = isPrivate
-        self.template = template
+        self.audioURL = audioURL
+        self.createdAt = Date()
+        self.aiAnalysis = nil
+    }
+}
+
+struct AIAnalysis: Codable {
+    let extractedTasks: [ExtractedTask]
+    let summary: String
+    let sentiment: String
+    let priority: String
+    let tags: [String]
+    let createdAt: Date
+    
+    init(extractedTasks: [ExtractedTask], summary: String, sentiment: String, priority: String, tags: [String]) {
+        self.extractedTasks = extractedTasks
+        self.summary = summary
+        self.sentiment = sentiment
+        self.priority = priority
+        self.tags = tags
+        self.createdAt = Date()
+    }
+}
+
+struct ExtractedTask: Codable {
+    let title: String
+    let description: String?
+    let priority: TaskPriority
+    let dueDate: Date?
+    let tags: [String]
+    let confidence: Double // Уверенность AI в извлечении задачи (0.0 - 1.0)
+    let address: String? // Адрес для выполнения задачи
+    
+    init(title: String, description: String? = nil, priority: TaskPriority = .medium, dueDate: Date? = nil, tags: [String] = [], confidence: Double = 0.8, address: String? = nil) {
+        self.title = title
+        self.description = description
+        self.priority = priority
+        self.dueDate = dueDate
+        self.tags = tags
+        self.confidence = confidence
+        self.address = address
     }
 }
 

@@ -20,7 +20,7 @@ struct HomeFilterChip: View {
 }
 
 struct HomeView: View {
-    @StateObject private var viewModel = HomeViewModel()
+    @EnvironmentObject var viewModel: HomeViewModel
     @State private var selectedFilter: String?
     @State private var filteredTasks: [TaskItem] = []
     
@@ -53,6 +53,8 @@ struct HomeView: View {
             }
             .tint(.espresso) // Исправляем цвет иконки обновления
             .onAppear {
+                print("🏠 HomeView onAppear вызван")
+                print("📊 viewModel.tasks.count: \(viewModel.tasks.count)")
                 // Инициализируем отфильтрованные задачи
                 filteredTasks = viewModel.tasks
             }
@@ -66,6 +68,9 @@ struct HomeView: View {
                 } else {
                     filteredTasks = viewModel.tasks
                 }
+            }
+            .sheet(isPresented: $viewModel.showingTaskCreation) {
+                TaskEditView(taskManager: viewModel.taskManager)
             }
             .overlay(
                 // Верхний градиент для плавного перехода
@@ -97,7 +102,7 @@ struct HomeView: View {
         HStack {
             // Current Date
             VStack(alignment: .leading, spacing: 4) {
-                Text(viewModel.currentDateString)
+                Text(DateFormatter.localizedString(from: Date(), dateStyle: .full, timeStyle: .none))
                     .font(.system(size: 18, weight: .medium))
                     .foregroundColor(.espresso)
                 
@@ -110,7 +115,7 @@ struct HomeView: View {
             
             // Greeting
             VStack(alignment: .center, spacing: 4) {
-                Text(viewModel.greeting)
+                Text(getGreeting())
                     .font(.system(size: 18, weight: .medium))
                     .foregroundColor(.espresso)
                 
@@ -119,7 +124,7 @@ struct HomeView: View {
                         .font(.system(size: 12))
                         .foregroundColor(.honeyGold)
                     
-                    Text("\(viewModel.currentStreak) дней подряд")
+                    Text("0 дней подряд")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.tobacco)
                 }
@@ -135,6 +140,7 @@ struct HomeView: View {
     private var mainRecordingButton: some View {
         VStack(spacing: 16) {
             Button(action: {
+                print("🎯 Кнопка нажата, текущее состояние: \(viewModel.isRecording)")
                 if viewModel.isRecording {
                     viewModel.stopRecording()
                 } else {
@@ -147,7 +153,7 @@ struct HomeView: View {
                         .frame(width: 88, height: 88)
                         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                     
-                    Image(systemName: viewModel.isRecording ? "stop.fill" : "mic.fill")
+                    Image(systemName: viewModel.isRecording ? "stop.fill" : "play.fill")
                         .font(.system(size: 32, weight: .medium))
                         .foregroundColor(.white)
                 }
@@ -179,6 +185,25 @@ struct HomeView: View {
                     }
                 }
                 .frame(height: 20)
+                
+                // Transcription display
+                if !viewModel.transcript.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Транскрипция:")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.espresso)
+                        
+                        Text(viewModel.transcript)
+                            .font(.system(size: 14))
+                            .foregroundColor(.tobacco)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(Color.porcelain)
+                            .cornerRadius(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.horizontal, 20)
+                }
             }
         }
     }
@@ -220,15 +245,26 @@ struct HomeView: View {
             // Filters
             filterChipsView
             
-            // Task Sections
+            // Task Sections - правильный порядок
             LazyVStack(spacing: 16) {
-                ForEach(TaskStatus.allCases, id: \.self) { status in
+                ForEach([
+                    TaskStatus.important,      // Важное - вверху
+                    TaskStatus.planned,        // В планах
+                    TaskStatus.stuck,          // Застряло
+                    TaskStatus.waiting,        // Ожидает ответа
+                    TaskStatus.delegated,      // Делегировано
+                    TaskStatus.paused,         // На паузе
+                    TaskStatus.recurring,      // Повторяющееся
+                    TaskStatus.idea,           // Идеи на потом
+                    TaskStatus.completed       // Свершилось - внизу
+                ], id: \.self) { status in
                     TaskSectionView(
                         status: status,
                         tasks: selectedFilter != nil ? 
                             filteredTasks.filter { $0.status == status } : 
                             viewModel.tasksForStatus(status),
-                        isCollapsed: viewModel.collapsedSections.contains(status)
+                        isCollapsed: viewModel.collapsedSections.contains(status),
+                        viewModel: viewModel
                     ) {
                         viewModel.toggleSection(status)
                     }
@@ -315,6 +351,24 @@ extension HomeView {
             // Обновляем отфильтрованные задачи
             filteredTasks = viewModel.tasks
             print("🔄 Данные обновлены")
+        }
+    }
+}
+
+// MARK: - Helper Functions
+extension HomeView {
+    private func getGreeting() -> String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        
+        switch hour {
+        case 5..<12:
+            return "Доброе утро"
+        case 12..<17:
+            return "Добрый день"
+        case 17..<22:
+            return "Добрый вечер"
+        default:
+            return "Доброй ночи"
         }
     }
 }

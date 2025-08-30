@@ -274,9 +274,12 @@ struct AnalyticsView: View {
         let calendar = Calendar.current
         let today = Date()
         
+        // Используем стабильные данные вместо случайных
+        let stableValues = [75.0, 82.0, 68.0, 89.0, 91.0, 78.0, 85.0]
+        
         return (0..<7).map { dayOffset in
             let date = calendar.date(byAdding: .day, value: -dayOffset, to: today) ?? today
-            let value = Double.random(in: 60...95)
+            let value = stableValues[dayOffset]
             return ProductivityData(date: date, value: value)
         }.reversed()
     }
