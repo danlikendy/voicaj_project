@@ -3,12 +3,10 @@
 > **Голосовой дневник задач и планирования**  
 > Умное приложение для создания задач через голосовые команды с AI-анализом и адаптивным интерфейсом
 
-[![iOS](https://img.shields.io/badge/iOS-18.5+-blue.svg)](https://developer.apple.com/ios/)
-[![Swift](https://img.shields.io/badge/Swift-5.9+-orange.svg)](https://swift.org/)
-[![SwiftUI](https://img.shields.io/badge/SwiftUI-5.0+-green.svg)](https://developer.apple.com/xcode/swiftui/)
+[![iOS](https://img.shields.io/badge/iOS-18.5+-blue.svg)](https://developer.apple.com/ios)
+[![Swift](https://img.shields.io/badge/Swift-5.9+-orange.svg)](https://swift.org)
+[![SwiftUI](https://img.shields.io/badge/SwiftUI-5.0+-green.svg)](https://developer.apple.com/xcode/swiftui)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
----
 
 ## О проекте
 
@@ -22,8 +20,6 @@
 - **Умная аналитика** — отслеживание прогресса и продуктивности
 - **Автоматическая синхронизация** — ваши данные всегда актуальны
 - **Темная тема** — поддержка светлой и темной темы с красивой палитрой цветов
-
----
 
 ## Архитектура
 
@@ -58,8 +54,6 @@ voicaj_project/
     └── Localizable.strings # Локализация
 ```
 
----
-
 ## Быстрый старт
 
 ### Требования
@@ -90,8 +84,6 @@ voicaj_project/
    - Выберите симулятор iPhone 16 или реальное устройство
    - Нажмите Run
 
----
-
 ## Дизайн и UX
 
 ### Палитра цветов
@@ -118,8 +110,6 @@ voicaj_project/
 - **Доступность** — поддержка VoiceOver и других технологий доступности
 - **Консистентность** — единообразный стиль во всех экранах
 
----
-
 ## Основные функции
 
 ### Голосовое управление
@@ -143,8 +133,6 @@ voicaj_project/
 - **Тренды** — отслеживание изменений во времени
 - **Экспорт** — поделитесь результатами с командой
 
----
-
 ## AI и машинное обучение
 
 ### Анализ голоса
@@ -160,8 +148,6 @@ voicaj_project/
 - **Группировка** — объединение связанных задач
 - **Приоритизация** — автоматическое ранжирование по важности
 - **Напоминания** — умные уведомления в нужный момент
-
----
 
 ## Экраны приложения
 
@@ -189,16 +175,12 @@ voicaj_project/
 - Сравнение периодов
 - Экспорт отчетов
 
----
-
 ## Безопасность и приватность
 
 - **Локальное хранение** — ваши данные остаются на устройстве
 - **Шифрование** — защита чувствительной информации
 - **Контроль доступа** — настройка приватности для каждой задачи
 - **GDPR-совместимость** — соответствие европейским стандартам
-
----
 
 ## Статус разработки
 
@@ -224,8 +206,6 @@ voicaj_project/
 - [ ] macOS версия
 - [ ] Веб-интерфейс
 
----
-
 ## Вклад в проект
 
 Мы приветствуем вклад в развитие Voicaj! Если у вас есть идеи, исправления или новые функции — создавайте Issues и Pull Requests
@@ -245,21 +225,13 @@ voicaj_project/
 - Покрывайте тестами новые функции
 - Обновляйте документацию при изменении API
 
----
-
 ## Лицензия
 
 Этот проект распространяется под лицензией MIT. См. файл [LICENSE](LICENSE) для подробностей
 
----
-
 ## Команда
 
 - **Разработчик**: [Artem](https://github.com/luvgreyair)
-- **Дизайнер**: [Artem](https://github.com/luvgreyair)
-- **Тестировщик**: [Artem](https://github.com/luvgreyair)
-
----
 
 ## Поддержка
 
@@ -268,16 +240,12 @@ voicaj_project/
 - **Email**: luvgreyair@vk.com
 - **Telegram**: [@luvgreyair](https://t.me/luvgreyair)
 
----
-
 ## Благодарности
 
 - [Apple](https://developer.apple.com) за SwiftUI и iOS SDK
 - [OpenAI](https://openai.com) за вдохновение в AI-функциях
 - [Figma](https://figma.com) за инструменты дизайна
 - Всем [контрибьюторам](https://github.com/luvgreyair/voicaj_project/graphs/contributors) проекта
-
----
 
 <div align="center">
 
