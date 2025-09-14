@@ -223,9 +223,9 @@ class ChatViewModel: ObservableObject {
     init(homeViewModel: HomeViewModel) {
         self.homeViewModel = homeViewModel
         
-        // Восстанавливаем Mock AI сервис для тестирования
+        // Используем улучшенный MockAIService с лучшим анализом
         self.aiService = MockAIService()
-        print("🤖 ChatView: Используется Mock AI сервис для тестирования")
+        print("🤖 ChatView: Используется улучшенный Mock AI сервис")
     }
     
     func loadInitialMessage() {

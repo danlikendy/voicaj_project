@@ -1,30 +1,15 @@
 import Foundation
 import Combine
 
-// MARK: - AI Service Protocol
-@preconcurrency
-protocol AIServiceProtocol: ObservableObject {
-    var conversationHistory: [AIMessage] { get async }
-    var contextMemory: [String: Any] { get async }
-    
-    func generateResponse(for message: String, context: [String]) async throws -> String
-    func analyzeVoiceRecording(_ transcript: String, audioURL: URL?) async throws -> VoiceAnalysisResult
-    func createTaskFromMessage(_ message: String, context: [String]) async throws -> TaskCreationResult
-    func updateContextMemory(key: String, value: Any) async
-    func getContextValue(for key: String) async -> Any?
-    func clearContextMemory() async
-}
-
-// MARK: - AI Service Implementation
+// MARK: - Local AI Service (Ollama)
 @MainActor
 @preconcurrency
-class AIService: AIServiceProtocol, ObservableObject {
-    private let apiKey: String
-    private let baseURL = "https://api.openai.com/v1/chat/completions"
-    
-    // MARK: - Published Properties
+class LocalAIService: AIServiceProtocol, ObservableObject {
     @Published var conversationHistory: [AIMessage] = []
     @Published var contextMemory: [String: Any] = [:]
+    
+    private let baseURL = "http://localhost:11434/api"
+    private let modelName = "qwen2.5:7b"
     
     // MARK: - Protocol Conformance
     var nonisolatedConversationHistory: [AIMessage] {
@@ -43,20 +28,9 @@ class AIService: AIServiceProtocol, ObservableObject {
         }
     }
     
-    // MARK: - Models
-    private let defaultModel = "gpt-4o-mini" // GPT-4o mini для баланса цена/качество
-    private let advancedModel = "gpt-4o" // GPT-4o для сложных задач
-    
-    // MARK: - Context Keys
-    private let userAddressKey = "user_address"
-    private let userPreferencesKey = "user_preferences"
-    private let taskHistoryKey = "task_history"
-    private let voiceRecordingsKey = "voice_recordings"
-    
-    init(apiKey: String) {
-        self.apiKey = apiKey
+    init() {
         loadContextMemory()
-        print("🤖 AI Service инициализирован с контекстной памятью")
+        print("🤖 Local AI Service (Ollama) инициализирован")
     }
     
     // MARK: - Chat Response Generation
@@ -67,17 +41,16 @@ class AIService: AIServiceProtocol, ObservableObject {
         let userMessage = AIMessage(role: "user", content: message)
         conversationHistory.append(userMessage)
         
-        let request = ChatRequest(
-            model: defaultModel,
+        let request = OllamaRequest(
+            model: modelName,
             messages: [
                 AIMessage(role: "system", content: systemPrompt),
                 userMessage
             ],
-            max_tokens: 1500,
-            temperature: 0.7
+            stream: false
         )
         
-        let response = try await performRequest(request)
+        let response = try await performOllamaRequest(request)
         
         // Добавляем ответ AI в историю
         let aiMessage = AIMessage(role: "assistant", content: response)
@@ -93,22 +66,16 @@ class AIService: AIServiceProtocol, ObservableObject {
     func analyzeVoiceRecording(_ transcript: String, audioURL: URL?) async throws -> VoiceAnalysisResult {
         let systemPrompt = await createVoiceAnalysisPrompt()
         
-        // Сохраняем запись в контекст
-        if let audioURL = audioURL {
-            await updateContextMemory(key: voiceRecordingsKey, value: audioURL)
-        }
-        
-        let request = ChatRequest(
-            model: advancedModel,
+        let request = OllamaRequest(
+            model: modelName,
             messages: [
                 AIMessage(role: "system", content: systemPrompt),
                 AIMessage(role: "user", content: "Транскрипция: \(transcript)")
             ],
-            max_tokens: 2000,
-            temperature: 0.3
+            stream: false
         )
         
-        let response = try await performRequest(request)
+        let response = try await performOllamaRequest(request)
         return await parseVoiceAnalysis(response, transcript: transcript)
     }
     
@@ -116,17 +83,16 @@ class AIService: AIServiceProtocol, ObservableObject {
     func createTaskFromMessage(_ message: String, context: [String]) async throws -> TaskCreationResult {
         let systemPrompt = await createTaskCreationPrompt()
         
-        let request = ChatRequest(
-            model: defaultModel,
+        let request = OllamaRequest(
+            model: modelName,
             messages: [
                 AIMessage(role: "system", content: systemPrompt),
                 AIMessage(role: "user", content: message)
             ],
-            max_tokens: 1500,
-            temperature: 0.5
+            stream: false
         )
         
-        let response = try await performRequest(request)
+        let response = try await performOllamaRequest(request)
         return await parseTaskCreation(response)
     }
     
@@ -149,9 +115,9 @@ class AIService: AIServiceProtocol, ObservableObject {
     
     // MARK: - Private Methods
     private func createSystemPrompt() async -> String {
-        let address = await getContextValue(for: userAddressKey) as? String ?? "не указан"
-        let preferences = await getContextValue(for: userPreferencesKey) as? [String] ?? []
-        let taskCount = (await getContextValue(for: taskHistoryKey) as? [String])?.count ?? 0
+        let address = await getContextValue(for: "user_address") as? String ?? "не указан"
+        let preferences = await getContextValue(for: "user_preferences") as? [String] ?? []
+        let taskCount = (await getContextValue(for: "task_history") as? [String])?.count ?? 0
         
         return """
         Ты - персональный AI ассистент для управления задачами и планирования. Твоя задача - помогать пользователю эффективно организовывать свою жизнь.
@@ -188,8 +154,8 @@ class AIService: AIServiceProtocol, ObservableObject {
     }
     
     private func createVoiceAnalysisPrompt() async -> String {
-        let address = await getContextValue(for: userAddressKey) as? String ?? "не указан"
-        let previousTasks = await getContextValue(for: taskHistoryKey) as? [String] ?? []
+        let address = await getContextValue(for: "user_address") as? String ?? "не указан"
+        let previousTasks = await getContextValue(for: "task_history") as? [String] ?? []
         
         return """
         Ты - эксперт по анализу голосовых записей и извлечению задач. Проанализируй транскрипцию и создай структурированные задачи.
@@ -225,7 +191,7 @@ class AIService: AIServiceProtocol, ObservableObject {
     }
     
     private func createTaskCreationPrompt() async -> String {
-        let address = await getContextValue(for: userAddressKey) as? String ?? "не указан"
+        let address = await getContextValue(for: "user_address") as? String ?? "не указан"
         
         return """
         Создай задачу на основе сообщения пользователя.
@@ -246,14 +212,13 @@ class AIService: AIServiceProtocol, ObservableObject {
         """
     }
     
-    private func performRequest(_ request: ChatRequest) async throws -> String {
-        guard let url = URL(string: baseURL) else {
+    private func performOllamaRequest(_ request: OllamaRequest) async throws -> String {
+        guard let url = URL(string: "\(baseURL)/chat") else {
             throw AIError.invalidURL
         }
         
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"
-        urlRequest.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let encoder = JSONEncoder()
@@ -266,12 +231,11 @@ class AIService: AIServiceProtocol, ObservableObject {
         }
         
         guard httpResponse.statusCode == 200 else {
-            let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data)
-            throw AIError.apiError(errorResponse?.error?.message ?? "Unknown error")
+            throw AIError.apiError("Ollama API error: \(httpResponse.statusCode)")
         }
         
-        let chatResponse = try JSONDecoder().decode(ChatResponse.self, from: data)
-        return chatResponse.choices.first?.message.content ?? ""
+        let ollamaResponse = try JSONDecoder().decode(OllamaResponse.self, from: data)
+        return ollamaResponse.message.content
     }
     
     private func parseVoiceAnalysis(_ response: String, transcript: String) async -> VoiceAnalysisResult {
@@ -289,8 +253,8 @@ class AIService: AIServiceProtocol, ObservableObject {
         return VoiceAnalysisResult(
             tasks: tasks,
             summary: response,
-            confidence: 0.95,
-            audioURL: await getContextValue(for: voiceRecordingsKey) as? URL
+            confidence: 0.9,
+            audioURL: nil
         )
     }
     
@@ -338,7 +302,7 @@ class AIService: AIServiceProtocol, ObservableObject {
                 priority: parsePriority(priority),
                 dueDate: parseDueDate(dueDate),
                 tags: parseTags(tags),
-                confidence: 0.95,
+                confidence: 0.9,
                 address: address.isEmpty ? nil : address
             )
         }
@@ -380,7 +344,6 @@ class AIService: AIServiceProtocol, ObservableObject {
         if lowercased.contains("завтра") { return calendar.date(byAdding: .day, value: 1, to: today) }
         if lowercased.contains("неделе") { return calendar.date(byAdding: .weekOfYear, value: 1, to: today) }
         
-        // Можно добавить более сложный парсинг дат
         return nil
     }
     
@@ -404,63 +367,14 @@ class AIService: AIServiceProtocol, ObservableObject {
     }
 }
 
-// MARK: - Models
-struct ChatRequest: Codable {
+// MARK: - Ollama Models
+struct OllamaRequest: Codable {
     let model: String
     let messages: [AIMessage]
-    let max_tokens: Int
-    let temperature: Double
+    let stream: Bool
 }
 
-struct AIMessage: Codable {
-    let role: String
-    let content: String
-}
-
-struct ChatResponse: Codable {
-    let choices: [Choice]
-}
-
-struct Choice: Codable {
+struct OllamaResponse: Codable {
     let message: AIMessage
-}
-
-struct ErrorResponse: Codable {
-    let error: APIError?
-}
-
-struct APIError: Codable {
-    let message: String
-}
-
-// MARK: - Result Models
-struct VoiceAnalysisResult {
-    let tasks: [ExtractedTask]
-    let summary: String
-    let confidence: Double
-    let audioURL: URL?
-}
-
-struct TaskCreationResult {
-    let task: ExtractedTask?
-    let message: String
-    let success: Bool
-}
-
-// MARK: - Errors
-enum AIError: Error, LocalizedError {
-    case invalidURL
-    case invalidResponse
-    case apiError(String)
-    
-    var errorDescription: String? {
-        switch self {
-        case .invalidURL:
-            return "Invalid URL"
-        case .invalidResponse:
-            return "Invalid response"
-        case .apiError(let message):
-            return "API Error: \(message)"
-        }
-    }
+    let done: Bool
 }

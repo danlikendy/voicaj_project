@@ -86,6 +86,7 @@ class HomeViewModel: ObservableObject {
     
     // MARK: - UI State
     @Published var showingTaskCreation = false
+    @Published var showingAITest = false
     
     // MARK: - Voice Recording (базовая версия)
     
@@ -101,9 +102,10 @@ class HomeViewModel: ObservableObject {
     private var aiService: any AIServiceProtocol
     
     init() {
-        // Временно используем MockAIService для тестирования
+        // Используем улучшенный MockAIService с лучшим анализом
         self.aiService = MockAIService()
-        print("🤖 Используется Mock AI сервис для тестирования")
+        print("🤖 Используется улучшенный Mock AI сервис")
+        print("💡 Для полного AI функционала нужно добавить LocalAIService.swift в проект Xcode")
         
         print("🚀 HomeViewModel инициализируется")
         setupData()
@@ -474,6 +476,23 @@ class HomeViewModel: ObservableObject {
                 taskManager.addTask(fallbackTask)
                 transcript = ""
                 aiAnalysisResult = "AI анализ не удался, но запись сохранена"
+            }
+        }
+    }
+    
+    // MARK: - AI Testing
+    
+    func testAIService() {
+        print("🧪 Тестирование AI сервиса...")
+        print("🤖 Текущий сервис: \(type(of: aiService))")
+        
+        // Простой тест Mock сервиса
+        Task {
+            do {
+                let result = try await aiService.analyzeVoiceRecording("Нужно купить хлеб завтра", audioURL: nil)
+                print("📊 Результат теста: \(result.tasks.count) задач найдено")
+            } catch {
+                print("❌ Ошибка теста: \(error)")
             }
         }
     }

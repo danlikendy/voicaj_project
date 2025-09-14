@@ -5,7 +5,7 @@ struct AIConfig {
     // OpenAI API Key - замените на свой
     // Для получения ключа: https://platform.openai.com/api-keys
     // ВАЖНО: Никогда не коммитьте реальные API ключи в репозиторий!
-    static let openAIKey = "your-openai-api-key-here"
+    static let openAIKey = "sk-proj-your-key-here"
     
     // Альтернативные API ключи
     static let claudeKey = "your-claude-api-key-here"
